@@ -23,7 +23,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 // time.
 
 
-const CREDENTIAL_FILE_PATH = 'credentials.json';
+const CREDENTIAL_FILE_PATH = './credentials.json';
 
 
 module.exports.GetAuthURL = async function (req, res, next) {
