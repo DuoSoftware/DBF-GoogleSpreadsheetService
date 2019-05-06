@@ -37,9 +37,13 @@ module.exports.GetAuthURL = async function (req, res, next) {
 
         let credentials = JSON.parse(content);
 
-        const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     client_id, client_secret, redirect_uris[0]);
+
         const oAuth2Client = new google.auth.OAuth2(
-            client_id, client_secret, redirect_uris[0]);
+            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+
 
         const authUrl = oAuth2Client.generateAuthUrl({
             access_type: 'offline',
@@ -63,9 +67,13 @@ module.exports.GetTokenByCode = async function (req, res, next) {
 
         let credentials = JSON.parse(content);
 
-        const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     client_id, client_secret, redirect_uris[0]);
+
         const oAuth2Client = new google.auth.OAuth2(
-            client_id, client_secret, redirect_uris[0]);
+            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+
 
         oAuth2Client.getToken(req.body.code, async (err, token) => {
             if (err) {
@@ -117,10 +125,12 @@ module.exports.Test = async function (req, res, next) {
 
         let credentials = JSON.parse(content);
 
-        const { client_secret, client_id, redirect_uris } = credentials.installed;
-        const oAuth2Client = new google.auth.OAuth2(
-            client_id, client_secret, redirect_uris[0]);
+        // const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     client_id, client_secret, redirect_uris[0]);
 
+        const oAuth2Client = new google.auth.OAuth2(
+            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
         await getTokenData("company", "tenant")
             .then(function (tokenResult) {
@@ -271,14 +281,14 @@ module.exports.UpdateValues = async function (req, res) {
                 spreadsheetId: '1hgz0fZ5IG25MCFk7tr_76epmnU8FgV9hI0lYXvjtn9U',
                 range: 'Sheet1!A1',
                 valueInputOption: 'RAW',
-                resource : {
+                resource: {
 
                     range: 'Sheet1!A1',
-                    
+
                     'majorDimension': 'ROWS',
-                    
-                    'values': [["name","list"]]
-                    }
+
+                    'values': [["name", "list"]]
+                }
             }, (err, result) => {
                 if (err) {
                     // Handle error
@@ -699,9 +709,12 @@ let getOAuth2ClientByAccessToken = (accessToken) => {
 
             let credentials = JSON.parse(content);
 
-            const { client_secret, client_id, redirect_uris } = credentials.installed;
+            // const { client_secret, client_id, redirect_uris } = credentials.installed;
+            // const oAuth2Client = new google.auth.OAuth2(
+            //     client_id, client_secret, redirect_uris[0]);
+
             const oAuth2Client = new google.auth.OAuth2(
-                client_id, client_secret, redirect_uris[0]);
+                config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
             await getTokenDataByAccessToken(accessToken)
@@ -736,9 +749,12 @@ let getOAuth2Client = (company, tenant) => {
 
             let credentials = JSON.parse(content);
 
-            const { client_secret, client_id, redirect_uris } = credentials.installed;
+            // const { client_secret, client_id, redirect_uris } = credentials.installed;
+            // const oAuth2Client = new google.auth.OAuth2(
+            //     client_id, client_secret, redirect_uris[0]);
+
             const oAuth2Client = new google.auth.OAuth2(
-                client_id, client_secret, redirect_uris[0]);
+                config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
             await getTokenData(company, tenant)

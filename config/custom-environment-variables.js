@@ -39,6 +39,12 @@ module.exports = {
         "domain": "HOST_NAME",
         "port": "HOST_LITETICKET_PORT",
         "version": "HOST_VERSION",
+    },
+
+    "GoogleSheets": {
+        "client_id": "CLIENT_ID",
+        "client_secret": "CLIENT_SECRET",
+        "redirect_uris": "REDIRECT_URIS"
     }
 };
 
