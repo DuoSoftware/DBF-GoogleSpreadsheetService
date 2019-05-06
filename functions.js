@@ -700,8 +700,8 @@ let getTokenDataByAccessToken = (accessToken) => {
     });
 }
 
-let getOAuth2ClientByAccessToken = async (accessToken) => {
-    return new Promise((resolve, reject) => {
+let getOAuth2ClientByAccessToken = (accessToken) => {
+    return new Promise(async (resolve, reject) => {
 
         // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
         // if (err) return console.log('Error loading client secret file:', err);
