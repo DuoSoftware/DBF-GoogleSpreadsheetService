@@ -119,57 +119,57 @@ module.exports.Test = async function (req, res, next) {
 
     console.log("====================Test Internal method====================/n");
 
-    fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
-        if (err) return console.log('Error loading client secret file:', err);
-        // Authorize a client with credentials, then call the Google Sheets API.
+    // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
+    // if (err) return console.log('Error loading client secret file:', err);
+    // Authorize a client with credentials, then call the Google Sheets API.
 
-        let credentials = JSON.parse(content);
+    // let credentials = JSON.parse(content);
 
-        // const { client_secret, client_id, redirect_uris } = credentials.installed;
-        // const oAuth2Client = new google.auth.OAuth2(
-        //     client_id, client_secret, redirect_uris[0]);
+    // const { client_secret, client_id, redirect_uris } = credentials.installed;
+    // const oAuth2Client = new google.auth.OAuth2(
+    //     client_id, client_secret, redirect_uris[0]);
 
-        const oAuth2Client = new google.auth.OAuth2(
-            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+    const oAuth2Client = new google.auth.OAuth2(
+        config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
-        await getTokenData("company", "tenant")
-            .then(function (tokenResult) {
-                console.log(tokenResult);
+    await getTokenData("company", "tenant")
+        .then(function (tokenResult) {
+            console.log(tokenResult);
 
-                let tokenData = {
-                    access_token: tokenResult.access_token,
-                    expiry_date: tokenResult.expiry_date,
-                    refresh_token: tokenResult.refresh_token,
-                    scope: tokenResult.scope,
-                    token_type: tokenResult.token_type
-                };
-                oAuth2Client.setCredentials(tokenData);
-                listMajors(oAuth2Client);
-            })
-            .catch(function (error) {
-                console.log(error);
-                res.end(error);
-                return;
-            });
-
-
-        // // Check if we have previously stored a token.
-        // fs.readFile(TOKEN_PATH, (err, token) => {
-        //     // if (err) return getNewToken(oAuth2Client, callback);
-
-        //     // console.log(JSON.parse(token)); 
-        //     // Object {access_token: "ya29.Glv7BmEUgy7ZFXGEjpYBKI6xc5O5ZIZu2DDTeB5TEpX-9…", refresh_token: "1/yGbcTSI6B2rDGaWVVWG3MsjEomUCCBew3e5XFEuKie8", scope: "https://www.googleapis.com/auth/spreadsheets.reado…", token_type: "Bearer", expiry_date: 1556620505539}
+            let tokenData = {
+                access_token: tokenResult.access_token,
+                expiry_date: tokenResult.expiry_date,
+                refresh_token: tokenResult.refresh_token,
+                scope: tokenResult.scope,
+                token_type: tokenResult.token_type
+            };
+            oAuth2Client.setCredentials(tokenData);
+            listMajors(oAuth2Client);
+        })
+        .catch(function (error) {
+            console.log(error);
+            res.end(error);
+            return;
+        });
 
 
-        //     oAuth2Client.setCredentials(JSON.parse(token));
-        //     listMajors(oAuth2Client);
-        //     // callback(oAuth2Client);
-        // });
+    // // Check if we have previously stored a token.
+    // fs.readFile(TOKEN_PATH, (err, token) => {
+    //     // if (err) return getNewToken(oAuth2Client, callback);
 
-        // oAuth2Client.setCredentials(JSON.parse(token));
+    //     // console.log(JSON.parse(token)); 
+    //     // Object {access_token: "ya29.Glv7BmEUgy7ZFXGEjpYBKI6xc5O5ZIZu2DDTeB5TEpX-9…", refresh_token: "1/yGbcTSI6B2rDGaWVVWG3MsjEomUCCBew3e5XFEuKie8", scope: "https://www.googleapis.com/auth/spreadsheets.reado…", token_type: "Bearer", expiry_date: 1556620505539}
 
 
-    });
+    //     oAuth2Client.setCredentials(JSON.parse(token));
+    //     listMajors(oAuth2Client);
+    //     // callback(oAuth2Client);
+    // });
+
+    // oAuth2Client.setCredentials(JSON.parse(token));
+
+
+    // });
 }
 
 module.exports.CreateSpreadSheet = async function (req, res) {
@@ -312,55 +312,55 @@ module.exports.UpdateValues = async function (req, res) {
         })
 }
 
-function workingWithCells(key, res) {
-    var doc = new GoogleSpreadsheet('1hgz0fZ5IG25MCFk7tr_76epmnU8FgV9hI0lYXvjtn9U');
-    var sheet;
+// function workingWithCells(key, res) {
+//     var doc = new GoogleSpreadsheet('1hgz0fZ5IG25MCFk7tr_76epmnU8FgV9hI0lYXvjtn9U');
+//     var sheet;
 
-    // see notes below for authentication instructions!
-    var creds = require('./credentials.json');
-    // OR, if you cannot save the file locally (like on heroku)
-    // var creds_json = {
-    //   client_email: 'sachitra.k@duosoftware.com',
-    //   private_key: key
-    // }
+//     // see notes below for authentication instructions!
+//     var creds = require('./credentials.json');
+//     // OR, if you cannot save the file locally (like on heroku)
+//     // var creds_json = {
+//     //   client_email: 'sachitra.k@duosoftware.com',
+//     //   private_key: key
+//     // }
 
-    doc.useServiceAccountAuth(creds, res);
-
-
-    doc.getInfo(function (err, info) {
-        console.log('Loaded doc: ' + info.title + ' by ' + info.author.email);
-        sheet = info.worksheets[0];
-        console.log('sheet 1: ' + sheet.title + ' ' + sheet.rowCount + 'x' + sheet.colCount);
-
-        sheet.getCells({
-            'min-row': 1,
-            'max-row': 5,
-            'return-empty': true
-        }, function (err, cells) {
-            var cell = cells[0];
-            console.log('Cell R' + cell.row + 'C' + cell.col + ' = ' + cell.value);
-
-            // cells have a value, numericValue, and formula
-            cell.value == '1'
-            cell.numericValue == 1;
-            cell.formula == '=ROW()';
-
-            // updating `value` is "smart" and generally handles things for you
-            cell.value = 123;
-            cell.value = '=A1+B2'
-            cell.save(); //async
-
-            // bulk updates make it easy to update many cells at once
-            cells[0].value = 1;
-            cells[1].value = 2;
-            cells[2].formula = '=A1+B1';
-            sheet.bulkUpdateCells(cells); //async
-
-        });
-    });
+//     doc.useServiceAccountAuth(creds, res);
 
 
-}
+//     doc.getInfo(function (err, info) {
+//         console.log('Loaded doc: ' + info.title + ' by ' + info.author.email);
+//         sheet = info.worksheets[0];
+//         console.log('sheet 1: ' + sheet.title + ' ' + sheet.rowCount + 'x' + sheet.colCount);
+
+//         sheet.getCells({
+//             'min-row': 1,
+//             'max-row': 5,
+//             'return-empty': true
+//         }, function (err, cells) {
+//             var cell = cells[0];
+//             console.log('Cell R' + cell.row + 'C' + cell.col + ' = ' + cell.value);
+
+//             // cells have a value, numericValue, and formula
+//             cell.value == '1'
+//             cell.numericValue == 1;
+//             cell.formula == '=ROW()';
+
+//             // updating `value` is "smart" and generally handles things for you
+//             cell.value = 123;
+//             cell.value = '=A1+B2'
+//             cell.save(); //async
+
+//             // bulk updates make it easy to update many cells at once
+//             cells[0].value = 1;
+//             cells[1].value = 2;
+//             cells[2].formula = '=A1+B1';
+//             sheet.bulkUpdateCells(cells); //async
+
+//         });
+//     });
+
+
+// }
 
 module.exports.GetData = async function (req, res) {
 
@@ -703,80 +703,80 @@ let getTokenDataByAccessToken = (accessToken) => {
 let getOAuth2ClientByAccessToken = (accessToken) => {
     return new Promise((resolve, reject) => {
 
-        fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
-            if (err) return console.log('Error loading client secret file:', err);
-            // Authorize a client with credentials, then call the Google Sheets API.
+        // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
+        // if (err) return console.log('Error loading client secret file:', err);
+        // Authorize a client with credentials, then call the Google Sheets API.
 
-            let credentials = JSON.parse(content);
+        // let credentials = JSON.parse(content);
 
-            // const { client_secret, client_id, redirect_uris } = credentials.installed;
-            // const oAuth2Client = new google.auth.OAuth2(
-            //     client_id, client_secret, redirect_uris[0]);
+        // const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     client_id, client_secret, redirect_uris[0]);
 
-            const oAuth2Client = new google.auth.OAuth2(
-                config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+        const oAuth2Client = new google.auth.OAuth2(
+            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
-            await getTokenDataByAccessToken(accessToken)
-                .then(function (tokenResult) {
-                    console.log(tokenResult);  //check whether the token data is coming right
+        await getTokenDataByAccessToken(accessToken)
+            .then(function (tokenResult) {
+                console.log(tokenResult);  //check whether the token data is coming right
 
-                    let tokenData = {
-                        access_token: tokenResult.access_token,
-                        expiry_date: tokenResult.expiry_date,
-                        refresh_token: tokenResult.refresh_token,
-                        scope: tokenResult.scope,
-                        token_type: tokenResult.token_type
-                    };
-                    oAuth2Client.setCredentials(tokenData);
-                    resolve(oAuth2Client);
-                })
-                .catch(function (error) {
-                    console.log(error);
-                    reject(error);
-                    return;
-                });
-        });
+                let tokenData = {
+                    access_token: tokenResult.access_token,
+                    expiry_date: tokenResult.expiry_date,
+                    refresh_token: tokenResult.refresh_token,
+                    scope: tokenResult.scope,
+                    token_type: tokenResult.token_type
+                };
+                oAuth2Client.setCredentials(tokenData);
+                resolve(oAuth2Client);
+            })
+            .catch(function (error) {
+                console.log(error);
+                reject(error);
+                return;
+            });
+        // });
     });
 }
 
 let getOAuth2Client = (company, tenant) => {
     return new Promise((resolve, reject) => {
 
-        fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
-            if (err) return console.log('Error loading client secret file:', err);
-            // Authorize a client with credentials, then call the Google Sheets API.
+        // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
+        // if (err) return console.log('Error loading client secret file:', err);
+        // Authorize a client with credentials, then call the Google Sheets API.
 
-            let credentials = JSON.parse(content);
+        // let credentials = JSON.parse(content);
 
-            // const { client_secret, client_id, redirect_uris } = credentials.installed;
-            // const oAuth2Client = new google.auth.OAuth2(
-            //     client_id, client_secret, redirect_uris[0]);
+        // const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     client_id, client_secret, redirect_uris[0]);
 
-            const oAuth2Client = new google.auth.OAuth2(
-                config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+        const oAuth2Client = new google.auth.OAuth2(
+            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
-            await getTokenData(company, tenant)
-                .then(function (tokenResult) {
-                    console.log(tokenResult);
+        await getTokenData(company, tenant)
+            .then(function (tokenResult) {
+                console.log(tokenResult);
 
-                    let tokenData = {
-                        access_token: tokenResult.access_token,
-                        expiry_date: tokenResult.expiry_date,
-                        refresh_token: tokenResult.refresh_token,
-                        scope: tokenResult.scope,
-                        token_type: tokenResult.token_type
-                    };
-                    oAuth2Client.setCredentials(tokenData);
-                    resolve(oAuth2Client);
-                })
-                .catch(function (error) {
-                    console.log(error);
-                    reject(error);
-                    return;
-                });
-        });
+                let tokenData = {
+                    access_token: tokenResult.access_token,
+                    expiry_date: tokenResult.expiry_date,
+                    refresh_token: tokenResult.refresh_token,
+                    scope: tokenResult.scope,
+                    token_type: tokenResult.token_type
+                };
+                oAuth2Client.setCredentials(tokenData);
+                resolve(oAuth2Client);
+            })
+            .catch(function (error) {
+                console.log(error);
+                reject(error);
+                return;
+            });
+        // });
     });
 }
 
