@@ -1,0 +1,32 @@
+{
+  "name": "googlespreadsheetsservice",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.6.2",
+    "aws-serverless-express": "^3.3.5",
+    "body-parser": "^1.18.3",
+    "circular-json": "^0.5.9",
+    "config": "^3.0.1",
+    "cors": "^2.8.5",
+    "dbf-dbmodels": "^1.0.174",
+    "dbf-permissionmanager": "^1.0.10",
+    "dbf-workspacemanager": "^1.0.5",
+    "dvp-common-lite": "^1.0.1",
+    "express": "^4.16.4",
+    "google-spreadsheet": "^2.0.7",
+    "googleapis": "^27.0.0",
+    "mongoose": "^5.4.20",
+    "request": "^2.88.0",
+    "restify": "^7.7.0",
+    "restify-cors-middleware": "^1.1.1",
+    "restify-jwt": "^0.4.0",
+    "uuid": "^3.3.2"
+  }
+}
