@@ -175,9 +175,25 @@ module.exports.Test = async function (req, res, next) {
 module.exports.CreateSpreadSheet = async function (req, res) {
 
     console.log("====================CreateSpreadSheet Internal method====================/n");
+    console.log(req);
 
+    let accessToken = "";
 
-    await getOAuth2ClientByAccessToken(req.body.accessToken)
+    if (typeof req.body === 'string') {
+        let body = JSON.parse(req.body);
+        accessToken = body.accessToken;
+    }
+    else {
+        accessToken = req.body.accessToken;
+    }
+
+    if (accessToken === "") {
+        console.log("AccessToken is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the access token is entered", false, undefined);
+        res.end(jsonString);
+    }
+
+    await getOAuth2ClientByAccessToken(accessToken)
         .then(function (auth) {
 
             const sheets = google.sheets({ version: 'v4', auth });
