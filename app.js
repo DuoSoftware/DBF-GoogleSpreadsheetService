@@ -45,12 +45,12 @@ server.listen(3669, () => {
 //         version: '1'
 //     }));
 
-server.get('/DBF/API/:version/TypeFormService/GetAuthURL', functions.GetAuthURL);
-server.post('/DBF/API/:version/TypeFormService/GetTokenByCode', functions.GetTokenByCode);
-server.get('/DBF/API/:version/TypeFormService/Test', functions.Test);
-server.post('/DBF/API/:version/TypeFormService/GetData', functions.GetData);
-server.post('/DBF/API/:version/TypeFormService/CreateSpreadSheet', functions.CreateSpreadSheet);
-server.post('/DBF/API/:version/TypeFormService/UpdateValues', functions.UpdateValues);
+server.get('/DBF/API/:version/GoogleSpreadsheetService/GetAuthURL', functions.GetAuthURL);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/GetTokenByCode', functions.GetTokenByCode);
+server.get('/DBF/API/:version/GoogleSpreadsheetService/Test', functions.Test);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/GetData', functions.GetData);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/CreateSpreadSheet', functions.CreateSpreadSheet);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/UpdateValues', functions.UpdateValues);
 
 
 
