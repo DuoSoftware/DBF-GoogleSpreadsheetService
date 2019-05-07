@@ -232,6 +232,8 @@ module.exports.UpdateValues = async function (req, res) {
 
     console.log("====================UpdateValues Internal method====================/n");
 
+    console.log(req.body);
+
     let accessToken = "";
     let addOption = "append"; // overwrite or append
     let endingCell = "";
