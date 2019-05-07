@@ -298,6 +298,7 @@ module.exports.UpdateValues = async function (req, res) {
             let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
 
             if (addOption === 'overwrite') {
+                console.log("overwriting" + spreadSheetID);
                 sheets.spreadsheets.values.update({
                     // spreadsheetId: req.body.spreadSheetID,
                     spreadsheetId: spreadSheetID,
@@ -325,6 +326,7 @@ module.exports.UpdateValues = async function (req, res) {
                 });
             }
             else {
+                console.log("appending" + spreadSheetID);
                 sheets.spreadsheets.values.append({
                     // spreadsheetId: req.body.spreadSheetID,
                     spreadsheetId: spreadSheetID,
