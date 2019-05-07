@@ -286,7 +286,7 @@ module.exports.UpdateValues = async function (req, res) {
         res.end(jsonString);
     }
 
-    var addOption = addOption.toLowerCase();
+    addOption = addOption.toLowerCase();
 
     await getOAuth2ClientByAccessToken(req.body.accessToken)
         .then(function (auth) {
