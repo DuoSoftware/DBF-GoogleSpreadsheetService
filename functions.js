@@ -410,7 +410,8 @@ module.exports.UpdateValues = async function (req, res) {
                             jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
                             res.end(jsonString);
                         } else {
-                            console.log('%d cells updated.', result.updatedCells);
+                            console.log(result);
+                            console.log('Successfully updated the cells');
                             jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
                             res.end(jsonString);
                         }
