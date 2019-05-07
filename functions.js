@@ -175,7 +175,7 @@ module.exports.Test = async function (req, res, next) {
 module.exports.CreateSpreadSheet = async function (req, res) {
 
     console.log("====================CreateSpreadSheet Internal method====================/n");
-    console.log(req);
+    // console.log(req);
 
     let accessToken = "";
 
@@ -232,91 +232,71 @@ module.exports.UpdateValues = async function (req, res) {
 
     console.log("====================UpdateValues Internal method====================/n");
 
+    let accessToken = "";
+    let spreadSheetID = "";
+    let sheetName = "";
+    let majorDimension = "ROWS";
+
+    if (typeof req.body === 'string') {
+        let body = JSON.parse(req.body);
+        accessToken = body.accessToken;
+        sheetmajorDimensionName = body.majorDimension;
+        spreadSheetID = body.spreadSheetID;
+        sheetName = body.sheetName;
+    }
+    else {
+        accessToken = req.body.accessToken;
+        majorDimension = req.body.majorDimension;
+        spreadSheetID = req.body.spreadSheetID;
+        sheetName = req.body.sheetName;
+    }
+
+    if (accessToken === "") {
+        console.log("AccessToken is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Access Token is entered", false, undefined);
+        res.end(jsonString);
+    }
+    if (spreadSheetID === "") {
+        console.log("SpreadSheetID is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the SpreadSheet ID is entered", false, undefined);
+        res.end(jsonString);
+    }
+    if (sheetName === "") {
+        console.log("SheetName is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Sheet Name is entered", false, undefined);
+        res.end(jsonString);
+    }
 
     await getOAuth2ClientByAccessToken(req.body.accessToken)
         .then(function (auth) {
 
-            //         // [START sheets_update_values]
-            //   let values = [
-            //     [
-            //       // Cell values ...
-            //     ],
-            //     // Additional rows ...
-            //   ];
-            //   // [START_EXCLUDE silent]
-            //   values = _values;
-            //   // [END_EXCLUDE]
-            //   const resource = {
-            //     values,
-            //   };
-            //   this.sheetsService.spreadsheets.values.update({
-            //     spreadsheetId,
-            //     range,
-            //     valueInputOption,
-            //     resource,
-            //   }, (err, result) => {
-            //     if (err) {
-            //       // Handle error
-            //       console.log(err);
-            //       // [START_EXCLUDE silent]
-            //       reject(err);
-            //       // [END_EXCLUDE]
-            //     } else {
-            //       console.log('%d cells updated.', result.updatedCells);
-            //       // [START_EXCLUDE silent]
-            //       resolve(result);
-            //       // [END_EXCLUDE]
-            //     }
-            //   });
-
-            // workingWithCells(req.body.accessToken);
-
             const sheets = google.sheets({ version: 'v4', auth });
 
-            //         "range":"Sheet1!A2:A3",
-            // "majorDimension": "ROWS",
-            // "values": [
-            //     ["UFC"],
-            //     ["KFC"]
-
-            // ],
-
-            //         let data = [
-            //             [
-            //                 "4"
-            //             ],
-            //             // Additional rows ...
-            //         ];
-
-            // const resources = {
-            //     data,
-            // };
+            let changeRange = sheetName + '!A1';
 
             sheets.spreadsheets.values.update({
                 // spreadsheetId: req.body.spreadSheetID,
-                spreadsheetId: '1hgz0fZ5IG25MCFk7tr_76epmnU8FgV9hI0lYXvjtn9U',
-                range: 'Sheet1!A1',
+                spreadsheetId: spreadSheetID,
+                range: changeRange,
                 valueInputOption: 'RAW',
                 resource: {
 
-                    range: 'Sheet1!A1',
+                    'range': changeRange,
 
-                    'majorDimension': 'ROWS',
-
-                    'values': [["name", "list"]]
+                    'majorDimension': majorDimension,
+                    // 'values': [["name", "list"]]
+                    'values': req.body.values
                 }
             }, (err, result) => {
                 if (err) {
-                    // Handle error
-                    console.log(err);
-                    // [START_EXCLUDE silent]
-                    // reject(err);
-                    // [END_EXCLUDE]
+                    // Handle error.
+                    console.log('Error occurred in updating cells: ' + err);
+                    jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
+                    res.end(jsonString);
                 } else {
                     console.log('%d cells updated.', result.updatedCells);
-                    // [START_EXCLUDE silent]
-                    // resolve(result);
-                    // [END_EXCLUDE]
+                    jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
+                    res.end(jsonString);
                 }
             });
 
