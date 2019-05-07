@@ -317,6 +317,7 @@ module.exports.UpdateValues = async function (req, res) {
         startingCell = body.startingCell;
     } else {
         console.log("ISSUE: StartingCell not entered!");
+        fieldValidationDone = false;
         jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
         res.end(jsonString);
     }
@@ -829,7 +830,9 @@ let getOAuth2ClientByAccessToken = (accessToken) => {
 
         await getTokenDataByAccessToken(accessToken)
             .then(function (tokenResult) {
-                console.log(tokenResult);  //check whether the token data is coming right
+                
+                console.log("\n========= tokenResult ========="); 
+                console.log(tokenResult); 
 
                 let tokenData = {
                     access_token: tokenResult.access_token,
