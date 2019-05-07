@@ -233,22 +233,31 @@ module.exports.UpdateValues = async function (req, res) {
     console.log("====================UpdateValues Internal method====================/n");
 
     let accessToken = "";
+    let addOption = "append"; // overwrite or append
+    let endingCell = "";
+    let majorDimension = "ROWS";
     let spreadSheetID = "";
     let sheetName = "";
-    let majorDimension = "ROWS";
+    let startingCell = "";
 
     if (typeof req.body === 'string') {
         let body = JSON.parse(req.body);
         accessToken = body.accessToken;
-        sheetmajorDimensionName = body.majorDimension;
+        addOption = body.addOption;
+        endingCell = body.endingCell;
+        majorDimension = body.majorDimension;
         spreadSheetID = body.spreadSheetID;
         sheetName = body.sheetName;
+        startingCell = body.startingCell;
     }
     else {
         accessToken = req.body.accessToken;
+        addOption = req.body.addOption;
+        endingCell = req.body.endingCell;
         majorDimension = req.body.majorDimension;
         spreadSheetID = req.body.spreadSheetID;
         sheetName = req.body.sheetName;
+        startingCell = req.body.startingCell;
     }
 
     if (accessToken === "") {
@@ -266,39 +275,81 @@ module.exports.UpdateValues = async function (req, res) {
         jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Sheet Name is entered", false, undefined);
         res.end(jsonString);
     }
+    if (endingCell === "") {
+        console.log("EndingCell is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Ending Cell is entered", false, undefined);
+        res.end(jsonString);
+    }
+    if (startingCell === "") {
+        console.log("StartingCell is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Starting Cell is entered", false, undefined);
+        res.end(jsonString);
+    }
+
+    var addOption = addOption.toLowerCase();
 
     await getOAuth2ClientByAccessToken(req.body.accessToken)
         .then(function (auth) {
 
             const sheets = google.sheets({ version: 'v4', auth });
 
-            let changeRange = sheetName + '!A1';
+            let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
 
-            sheets.spreadsheets.values.update({
-                // spreadsheetId: req.body.spreadSheetID,
-                spreadsheetId: spreadSheetID,
-                range: changeRange,
-                valueInputOption: 'RAW',
-                resource: {
+            if (addOption === 'overwrite') {
+                sheets.spreadsheets.values.update({
+                    // spreadsheetId: req.body.spreadSheetID,
+                    spreadsheetId: spreadSheetID,
+                    range: changeRange,
+                    valueInputOption: 'RAW',
+                    resource: {
 
-                    'range': changeRange,
+                        'range': changeRange,
 
-                    'majorDimension': majorDimension,
-                    // 'values': [["name", "list"]]
-                    'values': req.body.values
-                }
-            }, (err, result) => {
-                if (err) {
-                    // Handle error.
-                    console.log('Error occurred in updating cells: ' + err);
-                    jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
-                    res.end(jsonString);
-                } else {
-                    console.log('%d cells updated.', result.updatedCells);
-                    jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
-                    res.end(jsonString);
-                }
-            });
+                        'majorDimension': majorDimension,
+                        // 'values': [["name", "list"]]
+                        'values': req.body.values
+                    }
+                }, (err, result) => {
+                    if (err) {
+                        // Handle error.
+                        console.log('Error occurred in updating cells: ' + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log('%d cells updated.', result.updatedCells);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+            }
+            else {
+                sheets.spreadsheets.values.append({
+                    // spreadsheetId: req.body.spreadSheetID,
+                    spreadsheetId: spreadSheetID,
+                    range: changeRange,
+                    valueInputOption: 'RAW',
+                    resource: {
+
+                        'range': changeRange,
+
+                        'majorDimension': majorDimension,
+                        // 'values': [["name", "list"]]
+                        'values': req.body.values
+                    }
+                }, (err, result) => {
+                    if (err) {
+                        // Handle error.
+                        console.log('Error occurred in updating cells: ' + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log('%d cells updated.', result.updatedCells);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+            }
+
 
         })
         .catch(function (error) {
