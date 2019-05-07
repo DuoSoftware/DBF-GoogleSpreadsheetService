@@ -23,101 +23,105 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 // time.
 
 
-const CREDENTIAL_FILE_PATH = './credentials.json';
+// const CREDENTIAL_FILE_PATH = './credentials.json';
 
 
 module.exports.GetAuthURL = async function (req, res, next) {
 
-    console.log("====================GetAuthURL Internal method====================/n");
+    console.log("\n==================== GetAuthURL Internal method ====================\n");
 
     // Load client secrets from a local file.
-    fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
-        if (err) return console.log('Error loading client secret file:', err);
-        // Authorize a client with credentials, then call the Google Sheets API.
+    // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
+    // if (err) return console.log('Error loading client secret file:', err);
+    // Authorize a client with credentials, then call the Google Sheets API.
 
-        let credentials = JSON.parse(content);
+    // let credentials = JSON.parse(content);
 
-        // const { client_secret, client_id, redirect_uris } = credentials.installed;
-        // const oAuth2Client = new google.auth.OAuth2(
-        //     client_id, client_secret, redirect_uris[0]);
+    // const { client_secret, client_id, redirect_uris } = credentials.installed;
+    // const oAuth2Client = new google.auth.OAuth2(
+    //     client_id, client_secret, redirect_uris[0]);
 
-        const oAuth2Client = new google.auth.OAuth2(
-            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+    const oAuth2Client = new google.auth.OAuth2(
+        config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
-        const authUrl = oAuth2Client.generateAuthUrl({
-            access_type: 'offline',
-            scope: SCOPES,
-        });
-        console.log('Authorize this app by visiting this url:', authUrl);
-
-        jsonString = messageFormatter.FormatMessage(undefined, "URL successfully created", true, authUrl);
-        res.end(jsonString);
+    const authUrl = oAuth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: SCOPES,
     });
+    console.log('Authorize this app by visiting this url:', authUrl);
+
+    jsonString = messageFormatter.FormatMessage(undefined, "URL successfully created", true, authUrl);
+    res.end(jsonString);
+    // });
 }
 
 module.exports.GetTokenByCode = async function (req, res, next) {
 
-    console.log("====================GetTokenByCode Internal method====================/n");
+    console.log("\n==================== GetTokenByCode Internal method ====================\n");
+    // var company = parseInt(req.user.company);
+    // var tenant = parseInt(req.user.tenant);
+    var company = "company";
+    var tenant = "tenant";
 
     // Load client secrets from a local file.
-    fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
-        if (err) return console.log('Error loading client secret file:', err);
-        // Authorize a client with credentials, then call the Google Sheets API.
+    // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
+    // if (err) return console.log('Error loading client secret file:', err);
+    // Authorize a client with credentials, then call the Google Sheets API.
 
-        let credentials = JSON.parse(content);
+    // let credentials = JSON.parse(content);
 
-        // const { client_secret, client_id, redirect_uris } = credentials.installed;
-        // const oAuth2Client = new google.auth.OAuth2(
-        //     client_id, client_secret, redirect_uris[0]);
+    // const { client_secret, client_id, redirect_uris } = credentials.installed;
+    // const oAuth2Client = new google.auth.OAuth2(
+    //     client_id, client_secret, redirect_uris[0]);
 
-        const oAuth2Client = new google.auth.OAuth2(
-            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+    const oAuth2Client = new google.auth.OAuth2(
+        config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
-        oAuth2Client.getToken(req.body.code, async (err, token) => {
-            if (err) {
-                console.log('Error while trying to retrieve access token: ' + JSONC.stringify(err.response));
-                jsonString = messageFormatter.FormatMessage(err, "Get token from google sheets has failed", false, undefined);
-                res.end(jsonString);
-            }
-            else {
-                oAuth2Client.setCredentials(token);
+    oAuth2Client.getToken(req.body.code, async (err, token) => {
+        if (err) {
+            console.log('Error while trying to retrieve access token: ' + JSONC.stringify(err.response));
+            jsonString = messageFormatter.FormatMessage(err, "Get token from google sheets has failed", false, undefined);
+            res.end(jsonString);
+        }
+        else {
+            console.log("Token received: " + token);
+            oAuth2Client.setCredentials(token);
 
-                console.log(token);
+            // Store the token to disk for later program executions
+            // fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+            //     if (err) return console.error(err);
+            //     console.log('Token stored to', TOKEN_PATH);
+            // });
+            // callback(oAuth2Client);
 
-                // Store the token to disk for later program executions
-                // fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-                //     if (err) return console.error(err);
-                //     console.log('Token stored to', TOKEN_PATH);
-                // });
-                // callback(oAuth2Client);
+            // saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type);
+            await saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type)
+                .then(async function (tokenResult) {
+                    console.log("Token data save successful: " + tokenResult);
 
-                // saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type);
-                await saveTokenData("company", token.expiry_date, token.refresh_token, token.scope, "tenant", token.access_token, token.token_type)
-                    .then(async function (tokenResult) {
-                        console.log(tokenResult);
-
-                        await saveTokenLogData("company", token.expiry_date, token.refresh_token, token.scope, "tenant", token.access_token, token.token_type).catch(function (tokenError) {
-                            console.log(tokenError);
-                        });
-
-                        res.end(tokenResult);
-                        return;
-                    })
-                    .catch(function (error) {
-                        console.log(error);
-                        res.end(error);
-                        return;
+                    await saveTokenLogData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type).catch(function (tokenError) {
+                        console.log(tokenError);
                     });
-            }
-        });
+
+                    res.end(tokenResult);
+                    return;
+                })
+                .catch(function (error) {
+                    console.log("Token data save has failed: " + error);
+
+                    res.end(error);
+                    return;
+                });
+        }
     });
+    // });
 }
 
 module.exports.Test = async function (req, res, next) {
 
-    console.log("====================Test Internal method====================/n");
+    console.log("\n==================== Test Internal method ====================\n");
 
     // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
     // if (err) return console.log('Error loading client secret file:', err);
@@ -132,7 +136,7 @@ module.exports.Test = async function (req, res, next) {
     const oAuth2Client = new google.auth.OAuth2(
         config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
-    await getTokenData("company", "tenant")
+    await getTokenDataByCompanyTenant("company", "tenant")
         .then(function (tokenResult) {
             console.log(tokenResult);
 
@@ -174,7 +178,7 @@ module.exports.Test = async function (req, res, next) {
 
 module.exports.CreateSpreadSheet = async function (req, res) {
 
-    console.log("====================CreateSpreadSheet Internal method====================/n");
+    console.log("\n==================== CreateSpreadSheet Internal method ====================\n");
     // console.log(req);
 
     let accessToken = "";
@@ -230,10 +234,12 @@ module.exports.CreateSpreadSheet = async function (req, res) {
 
 module.exports.UpdateValues = async function (req, res) {
 
-    console.log("====================UpdateValues Internal method====================/n");
+    console.log("\n==================== UpdateValues Internal method ====================\n");
 
-    console.log(req.body);
+    // console.log("===== request body ======");
+    // console.log(req.body);
 
+    let body;
     let accessToken = "";
     let addOption = "append"; // overwrite or append
     let endingCell = "";
@@ -241,128 +247,182 @@ module.exports.UpdateValues = async function (req, res) {
     let spreadsheetID = "";
     let sheetName = "";
     let startingCell = "";
+    let fieldValidationDone = true;
 
     if (typeof req.body === 'string') {
-        console.log("2 " + body.spreadsheetID);
-        let body = JSON.parse(req.body);
-        accessToken = body.accessToken;
-        addOption = body.addOption;
-        endingCell = body.endingCell;
-        majorDimension = body.majorDimension;
-        spreadsheetID = body.spreadsheetID;
-        sheetName = body.sheetName;
-        startingCell = body.startingCell;
+        body = JSON.parse(req.body);
     }
     else {
-        console.log("1 " + req.body.spreadsheetID);
-        accessToken = req.body.accessToken;
-        addOption = req.body.addOption;
-        endingCell = req.body.endingCell;
-        majorDimension = req.body.majorDimension;
-        spreadsheetID = req.body.spreadsheetID;
-        sheetName = req.body.sheetName;
-        startingCell = req.body.startingCell;
+        body = req.body;
+
+        // accessToken = req.body.accessToken;
+        // addOption = req.body.addOption;
+        // endingCell = req.body.endingCell;
+        // majorDimension = req.body.majorDimension;
+        // spreadsheetID = req.body.spreadsheetID;
+        // sheetName = req.body.sheetName;
+        // startingCell = req.body.startingCell;
     }
 
-    if (accessToken === "") {
-        console.log("AccessToken is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Access Token is entered", false, undefined);
-        res.end(jsonString);
-    }
-    if (spreadsheetID === "") {
-        console.log("SpreadsheetID is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Spreadsheet ID is entered", false, undefined);
-        res.end(jsonString);
-    }
-    if (sheetName === "") {
-        console.log("SheetName is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Sheet Name is entered", false, undefined);
-        res.end(jsonString);
-    }
-    if (endingCell === "") {
-        console.log("EndingCell is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Ending Cell is entered", false, undefined);
-        res.end(jsonString);
-    }
-    if (startingCell === "") {
-        console.log("StartingCell is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Starting Cell is entered", false, undefined);
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
         res.end(jsonString);
     }
 
-    addOption = addOption.toLowerCase();
+    if (body.addOption !== undefined && body.addOption !== '') {
+        addOption = body.addOption;
+    } else {
+        console.log("ISSUE: AddOption not entered!");
+    }
 
-    await getOAuth2ClientByAccessToken(req.body.accessToken)
-        .then(function (auth) {
+    if (body.endingCell !== undefined && body.endingCell !== '') {
+        endingCell = body.endingCell;
+    } else {
+        console.log("ISSUE: EndingCell not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the ending cell details", false, undefined);
+        res.end(jsonString);
+    }
 
-            const sheets = google.sheets({ version: 'v4', auth });
+    if (body.majorDimension !== undefined && body.majorDimension !== '') {
+        majorDimension = body.majorDimension;
+    } else {
+        console.log("ISSUE: MajorDimension not entered!");
+    }
 
-            let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
-
-            if (addOption === 'overwrite') {
-                console.log("overwriting" + spreadsheetID);
-                sheets.spreadsheets.values.update({
-                    // spreadsheetId: req.body.spreadsheetID,
-                    spreadsheetId: spreadsheetID,
-                    range: changeRange,
-                    valueInputOption: 'RAW',
-                    resource: {
-
-                        'range': changeRange,
-
-                        'majorDimension': majorDimension,
-                        // 'values': [["name", "list"]]
-                        'values': req.body.values
-                    }
-                }, (err, result) => {
-                    if (err) {
-                        // Handle error.
-                        console.log('Error occurred in updating cells: ' + err);
-                        jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
-                        res.end(jsonString);
-                    } else {
-                        console.log('%d cells updated.', result.updatedCells);
-                        jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
-                        res.end(jsonString);
-                    }
-                });
-            }
-            else {
-                console.log("appending" + spreadsheetID);
-                sheets.spreadsheets.values.append({
-                    // spreadsheetId: req.body.spreadsheetID,
-                    spreadsheetId: spreadsheetID,
-                    range: changeRange,
-                    valueInputOption: 'RAW',
-                    resource: {
-
-                        'range': changeRange,
-
-                        'majorDimension': majorDimension,
-                        // 'values': [["name", "list"]]
-                        'values': req.body.values
-                    }
-                }, (err, result) => {
-                    if (err) {
-                        // Handle error.
-                        console.log('Error occurred in updating cells: ' + err);
-                        jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
-                        res.end(jsonString);
-                    } else {
-                        console.log('%d cells updated.', result.updatedCells);
-                        jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
-                        res.end(jsonString);
-                    }
-                });
-            }
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
 
 
-        })
-        .catch(function (error) {
-            console.log(error);
-            res.end(error);
-            return;
-        })
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.startingCell !== undefined && body.startingCell !== '') {
+        startingCell = body.startingCell;
+    } else {
+        console.log("ISSUE: StartingCell not entered!");
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        res.end(jsonString);
+    }
+
+    // accessToken = body.accessToken;
+    // addOption = body.addOption;
+    // endingCell = body.endingCell;
+    // majorDimension = body.majorDimension;
+    // spreadsheetID = body.spreadsheetID;
+    // sheetName = body.sheetName;
+    // startingCell = body.startingCell;
+
+    // if (accessToken === "") {
+    //     console.log("AccessToken is empty")
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Access Token is entered", false, undefined);
+    //     res.end(jsonString);
+    // }
+    // if (spreadsheetID === "") {
+    //     console.log("SpreadsheetID is empty")
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Spreadsheet ID is entered", false, undefined);
+    //     res.end(jsonString);
+    // }
+    // if (sheetName === "") {
+    //     console.log("SheetName is empty")
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Sheet Name is entered", false, undefined);
+    //     res.end(jsonString);
+    // }
+    // if (endingCell === "") {
+    //     console.log("EndingCell is empty")
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Ending Cell is entered", false, undefined);
+    //     res.end(jsonString);
+    // }
+    // if (startingCell === "") {
+    //     console.log("StartingCell is empty")
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Starting Cell is entered", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+    if (fieldValidationDone !== false) {
+
+        addOption = addOption.toLowerCase();
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+                if (addOption === 'overwrite') {
+                    console.log("Overwriting " + spreadsheetID);
+                    sheets.spreadsheets.values.update({
+                        // spreadsheetId: req.body.spreadsheetID,
+                        spreadsheetId: spreadsheetID,
+                        range: changeRange,
+                        valueInputOption: 'RAW',
+                        resource: {
+                            'range': changeRange,
+                            'majorDimension': majorDimension,
+                            'values': req.body.values
+                        }
+                    }, (err, result) => {
+                        if (err) {
+                            // Handle error.
+                            console.log('Error occurred in updating cells: ' + err);
+                            jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
+                            res.end(jsonString);
+                        } else {
+                            console.log('%d cells updated.', result.updatedCells);
+                            jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
+                            res.end(jsonString);
+                        }
+                    });
+                }
+                else {
+                    console.log("Appending " + spreadsheetID);
+                    sheets.spreadsheets.values.append({
+                        // spreadsheetId: req.body.spreadsheetID,
+                        spreadsheetId: spreadsheetID,
+                        range: changeRange,
+                        valueInputOption: 'RAW',
+                        resource: {
+                            'range': changeRange,
+                            'majorDimension': majorDimension,
+                            'values': req.body.values
+                        }
+                    }, (err, result) => {
+                        if (err) {
+                            // Handle error.
+                            console.log('Error occurred in updating cells: ' + err);
+                            jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
+                            res.end(jsonString);
+                        } else {
+                            console.log('%d cells updated.', result.updatedCells);
+                            jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
+                            res.end(jsonString);
+                        }
+                    });
+                }
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
 }
 
 // function workingWithCells(key, res) {
@@ -417,8 +477,7 @@ module.exports.UpdateValues = async function (req, res) {
 
 module.exports.GetData = async function (req, res) {
 
-    console.log("====================GetData Internal method====================/n");
-
+    console.log("\n==================== GetData Internal method ====================\n");
 
     await getOAuth2ClientByAccessToken(req.body.accessToken)
         .then(function (auth) {
@@ -532,7 +591,7 @@ function listMajors(auth2) {
 
 module.exports.GetFormsByID = async function (req, res) {
 
-    console.log("====================GetFormsByID Internal method====================/n");
+    console.log("\n====================GetFormsByID Internal method====================\n");
 
     // let Schema = mongoose.Schema;
     // let ObjectId = Schema.ObjectId;
@@ -649,7 +708,6 @@ let getTokenFromTypeFormByRefreshT = (code) => {
 }
 
 let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type) => {
-
     return new Promise((resolve, reject) => {
         let tokenData = {
             access_token: access_token,
@@ -681,7 +739,6 @@ let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_
 }
 
 let saveTokenLogData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type) => {
-
     return new Promise((resolve, reject) => {
 
         let logID = uuidv1();
@@ -714,7 +771,7 @@ let saveTokenLogData = (company, expiry_date, refresh_token, scope, tenant, acce
     });
 }
 
-let getTokenData = (company, tenant) => {
+let getTokenDataByCompanyTenant = (company, tenant) => {
     return new Promise((resolve, reject) => {
 
         // getTokenData("1", "51");
@@ -810,7 +867,7 @@ let getOAuth2Client = (company, tenant) => {
             config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
-        await getTokenData(company, tenant)
+        await getTokenDataByCompanyTenant(company, tenant)
             .then(function (tokenResult) {
                 console.log(tokenResult);
 
