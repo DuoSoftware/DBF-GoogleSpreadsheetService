@@ -368,7 +368,6 @@ module.exports.UpdateValues = async function (req, res) {
                 let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
 
                 if (addOption === 'overwrite') {
-                    console.log("Overwriting " + spreadsheetID);
                     sheets.spreadsheets.values.update({
                         // spreadsheetId: req.body.spreadsheetID,
                         spreadsheetId: spreadsheetID,
@@ -386,14 +385,14 @@ module.exports.UpdateValues = async function (req, res) {
                             jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
                             res.end(jsonString);
                         } else {
-                            console.log('%d cells updated.', result.updatedCells);
+                            console.log(result);
+                            console.log('Successfully updated the cells');
                             jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
                             res.end(jsonString);
                         }
                     });
                 }
                 else {
-                    console.log("Appending " + spreadsheetID);
                     sheets.spreadsheets.values.append({
                         // spreadsheetId: req.body.spreadsheetID,
                         spreadsheetId: spreadsheetID,
@@ -830,9 +829,9 @@ let getOAuth2ClientByAccessToken = (accessToken) => {
 
         await getTokenDataByAccessToken(accessToken)
             .then(function (tokenResult) {
-                
-                console.log("\n========= tokenResult ========="); 
-                console.log(tokenResult); 
+
+                console.log("\n========= tokenResult =========");
+                console.log(tokenResult);
 
                 let tokenData = {
                     access_token: tokenResult.access_token,
