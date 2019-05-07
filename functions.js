@@ -238,28 +238,28 @@ module.exports.UpdateValues = async function (req, res) {
     let addOption = "append"; // overwrite or append
     let endingCell = "";
     let majorDimension = "ROWS";
-    let spreadSheetID = "";
+    let spreadsheetID = "";
     let sheetName = "";
     let startingCell = "";
 
     if (typeof req.body === 'string') {
-        console.log("2 " + body.spreadSheetID);
+        console.log("2 " + body.spreadsheetID);
         let body = JSON.parse(req.body);
         accessToken = body.accessToken;
         addOption = body.addOption;
         endingCell = body.endingCell;
         majorDimension = body.majorDimension;
-        spreadSheetID = body.spreadSheetID;
+        spreadsheetID = body.spreadsheetID;
         sheetName = body.sheetName;
         startingCell = body.startingCell;
     }
     else {
-        console.log("1 " + req.body.spreadSheetID);
+        console.log("1 " + req.body.spreadsheetID);
         accessToken = req.body.accessToken;
         addOption = req.body.addOption;
         endingCell = req.body.endingCell;
         majorDimension = req.body.majorDimension;
-        spreadSheetID = req.body.spreadSheetID;
+        spreadsheetID = req.body.spreadsheetID;
         sheetName = req.body.sheetName;
         startingCell = req.body.startingCell;
     }
@@ -269,9 +269,9 @@ module.exports.UpdateValues = async function (req, res) {
         jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Access Token is entered", false, undefined);
         res.end(jsonString);
     }
-    if (spreadSheetID === "") {
-        console.log("SpreadSheetID is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the SpreadSheet ID is entered", false, undefined);
+    if (spreadsheetID === "") {
+        console.log("SpreadsheetID is empty")
+        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Spreadsheet ID is entered", false, undefined);
         res.end(jsonString);
     }
     if (sheetName === "") {
@@ -300,10 +300,10 @@ module.exports.UpdateValues = async function (req, res) {
             let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
 
             if (addOption === 'overwrite') {
-                console.log("overwriting" + spreadSheetID);
+                console.log("overwriting" + spreadsheetID);
                 sheets.spreadsheets.values.update({
-                    // spreadsheetId: req.body.spreadSheetID,
-                    spreadsheetId: spreadSheetID,
+                    // spreadsheetId: req.body.spreadsheetID,
+                    spreadsheetId: spreadsheetID,
                     range: changeRange,
                     valueInputOption: 'RAW',
                     resource: {
@@ -328,10 +328,10 @@ module.exports.UpdateValues = async function (req, res) {
                 });
             }
             else {
-                console.log("appending" + spreadSheetID);
+                console.log("appending" + spreadsheetID);
                 sheets.spreadsheets.values.append({
-                    // spreadsheetId: req.body.spreadSheetID,
-                    spreadsheetId: spreadSheetID,
+                    // spreadsheetId: req.body.spreadsheetID,
+                    spreadsheetId: spreadsheetID,
                     range: changeRange,
                     valueInputOption: 'RAW',
                     resource: {
