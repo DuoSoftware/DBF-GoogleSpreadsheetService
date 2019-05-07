@@ -243,6 +243,7 @@ module.exports.UpdateValues = async function (req, res) {
     let startingCell = "";
 
     if (typeof req.body === 'string') {
+        console.log("2 " + body.spreadSheetID);
         let body = JSON.parse(req.body);
         accessToken = body.accessToken;
         addOption = body.addOption;
@@ -253,6 +254,7 @@ module.exports.UpdateValues = async function (req, res) {
         startingCell = body.startingCell;
     }
     else {
+        console.log("1 " + req.body.spreadSheetID);
         accessToken = req.body.accessToken;
         addOption = req.body.addOption;
         endingCell = req.body.endingCell;
