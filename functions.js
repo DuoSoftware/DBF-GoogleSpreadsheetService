@@ -59,6 +59,9 @@ module.exports.GetAuthURL = async function (req, res, next) {
 module.exports.GetTokenByCode = async function (req, res, next) {
 
     console.log("\n==================== GetTokenByCode Internal method ====================\n");
+
+    console.log(req);
+
     // var company = parseInt(req.user.company);
     // var tenant = parseInt(req.user.tenant);
     var company = "company";
@@ -410,8 +413,9 @@ module.exports.UpdateValues = async function (req, res) {
                             jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
                             res.end(jsonString);
                         } else {
-                            console.log(result);
+                            // console.log(result);
                             console.log('Successfully updated the cells');
+                            // console.log('%d cells updated.', result.data,updates.updatedCells);
                             jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
                             res.end(jsonString);
                         }
