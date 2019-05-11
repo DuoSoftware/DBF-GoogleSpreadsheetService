@@ -126,6 +126,8 @@ module.exports.Test = async function (req, res, next) {
 
     console.log("\n==================== Test Internal method ====================\n");
 
+    console.log(req);
+
     // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
     // if (err) return console.log('Error loading client secret file:', err);
     // Authorize a client with credentials, then call the Google Sheets API.
@@ -136,28 +138,28 @@ module.exports.Test = async function (req, res, next) {
     // const oAuth2Client = new google.auth.OAuth2(
     //     client_id, client_secret, redirect_uris[0]);
 
-    const oAuth2Client = new google.auth.OAuth2(
-        config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+    // const oAuth2Client = new google.auth.OAuth2(
+    //     config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
-    await getTokenDataByCompanyTenant("company", "tenant")
-        .then(function (tokenResult) {
-            console.log(tokenResult);
+    // await getTokenDataByCompanyTenant("company", "tenant")
+    //     .then(function (tokenResult) {
+    //         console.log(tokenResult);
 
-            let tokenData = {
-                access_token: tokenResult.access_token,
-                expiry_date: tokenResult.expiry_date,
-                refresh_token: tokenResult.refresh_token,
-                scope: tokenResult.scope,
-                token_type: tokenResult.token_type
-            };
-            oAuth2Client.setCredentials(tokenData);
-            listMajors(oAuth2Client);
-        })
-        .catch(function (error) {
-            console.log(error);
-            res.end(error);
-            return;
-        });
+    //         let tokenData = {
+    //             access_token: tokenResult.access_token,
+    //             expiry_date: tokenResult.expiry_date,
+    //             refresh_token: tokenResult.refresh_token,
+    //             scope: tokenResult.scope,
+    //             token_type: tokenResult.token_type
+    //         };
+    //         oAuth2Client.setCredentials(tokenData);
+    //         listMajors(oAuth2Client);
+    //     })
+    //     .catch(function (error) {
+    //         console.log(error);
+    //         res.end(error);
+    //         return;
+    //     });
 
 
     // // Check if we have previously stored a token.
