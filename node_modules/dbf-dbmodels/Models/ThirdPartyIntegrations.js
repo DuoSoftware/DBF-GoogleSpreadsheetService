@@ -12,6 +12,7 @@ var userIntegrationScheme = new Schema({
     integrationType: {type:String,require:true},
     integrationData:{type:Object},
     description: {type:String},
+    state: {type:String},
     image:{type:String},
     enable: { type : Boolean , default : true }
 });

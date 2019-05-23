@@ -44,6 +44,7 @@ var workSpaceScheme = new Schema({
     created_at: {type:Date,default: Date.now,require:true},
     updated_at: {type:Date,default: Date.now,require:true},
     workSpaceName: {type:String,require:true},
+    label: {type:String,require:true},
     billingAccount : {type:String,require:true},
     projects:[{
         projectName: {type:String,require:true},

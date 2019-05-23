@@ -8,6 +8,7 @@ const async = require('async');
 const request = require('request');
 const googlesheets = require('dbf-dbmodels/Models/GoogleSheets').googlesheets;
 const googlesheetslog = require('dbf-dbmodels/Models/GoogleSheets').googlesheetslog;
+const connections = require('dbf-dbmodels/Models/GoogleSheets').connections;
 const uuidv1 = require('uuid/v1');
 const JSONC = require('circular-json');
 
@@ -44,12 +45,19 @@ module.exports.GetAuthURL = async function (req, res, next) {
     const oAuth2Client = new google.auth.OAuth2(
         config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
+    // const oAuth2Client = new google.auth.OAuth2(
+    //     "535313902488-9qn6t0lfm0j2cvr6aihg71oaair4o06o.apps.googleusercontent.com", "UiGY9gNi3eVhJqoxydZ5PRnS", "https://googlesheetsdev.plus.smoothflow.io/DBF/API/5/GoogleSpreadsheetService/Test");
+
+    // const oAuth2Client = new google.auth.OAuth2(
+    //     "535313902488-e6u9tb709cfdl824cl14hh4icag9ip32.apps.googleusercontent.com", "BxuRRx0Bok7LOgxhypOBMyTW", "https://googlesheetsdev.plus.smoothflow.io/DBF/API/5/GoogleSpreadsheetService/Test");
+
+
 
     const authUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: SCOPES,
     });
-    console.log('Authorize this app by visiting this url:', authUrl);
+    console.log('Authorize this app by visiting this url: ', authUrl);
 
     jsonString = messageFormatter.FormatMessage(undefined, "URL successfully created", true, authUrl);
     res.end(jsonString);
@@ -66,6 +74,7 @@ module.exports.GetTokenByCode = async function (req, res, next) {
     // var tenant = parseInt(req.user.tenant);
     var company = "company";
     var tenant = "tenant";
+    var userSub = "userSub";
 
     // Load client secrets from a local file.
     // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
@@ -100,7 +109,7 @@ module.exports.GetTokenByCode = async function (req, res, next) {
             // callback(oAuth2Client);
 
             // saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type);
-            await saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type)
+            await saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type, userSub)
                 .then(async function (tokenResult) {
                     console.log("Token data save successful: " + tokenResult);
 
@@ -127,6 +136,17 @@ module.exports.Test = async function (req, res, next) {
     console.log("\n==================== Test Internal method ====================\n");
 
     console.log(req);
+
+    console.log("=========================================================");
+
+    console.log(req.url);
+    console.log("=========================================================");
+
+    console.log(req.params);
+    console.log("=========================================================");
+
+
+    console.log(req.body);
 
     // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
     // if (err) return console.log('Error loading client secret file:', err);
@@ -237,6 +257,191 @@ module.exports.CreateSpreadSheet = async function (req, res) {
         })
 }
 
+module.exports.CreateSheet = async function (req, res) {
+
+    console.log("\n==================== CreateSheet Internal method ====================\n");
+    // console.log(req);
+
+    let body;
+    let accessToken = "";
+    let spreadsheetID = "";
+    let sheetName = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                const request = {
+                    // The ID of the spreadsheet
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+
+                        "requests": [
+                            {
+                                "addSheet": {
+                                    "properties": {
+                                        "title": sheetName
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+
+                sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                    if (err) {
+                        // Handle error.
+                        console.log(err);
+                        jsonString = messageFormatter.FormatMessage(err, "Sheet creation has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log(response);
+                        // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet successfully created", true, spreadsheet.data.spreadsheetId);
+                        res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
+
+module.exports.CopySheetToAnotherSpreadsheet = async function (req, res) {
+    //TO TEST
+    console.log("\n==================== CopySheetToAnotherSpreadsheet Internal method ====================\n");
+    // console.log(req);
+
+    let body;
+    let accessToken = "";
+    let spreadsheetID = "";
+    let sheetID = "";
+    let destinationSpreadsheetID = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.sheetID !== undefined && body.sheetID !== '') {
+        sheetID = body.sheetID;
+    } else {
+        console.log("ISSUE: sheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.destinationSpreadsheetID !== undefined && body.destinationSpreadsheetID !== '') {
+        destinationSpreadsheetID = body.destinationSpreadsheetID;
+    } else {
+        console.log("ISSUE: destinationSpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the destination Spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+
+                var sheets = google.sheets('v4');
+
+                var request = {
+                    spreadsheetId: spreadsheetID,
+                    sheetId: sheetID,
+                    resource: {
+                        destinationSpreadsheetId: destinationSpreadsheetID
+                    },
+                    auth: auth,
+                };
+
+                sheets.spreadsheets.sheets.copyTo(request, function (err, response) {
+                    if (err) {
+                        // Handle error.
+                        console.log('Error occurred in copying the sheet: ' + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Copying the sheet has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log(response);
+                        console.log('Successfully copied the sheet');
+                        jsonString = messageFormatter.FormatMessage(undefined, "Sheet successfully copied", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
 module.exports.UpdateValues = async function (req, res) {
 
     console.log("\n==================== UpdateValues Internal method ====================\n");
@@ -259,14 +464,6 @@ module.exports.UpdateValues = async function (req, res) {
     }
     else {
         body = req.body;
-
-        // accessToken = req.body.accessToken;
-        // addOption = req.body.addOption;
-        // endingCell = req.body.endingCell;
-        // majorDimension = req.body.majorDimension;
-        // spreadsheetID = req.body.spreadsheetID;
-        // sheetName = req.body.sheetName;
-        // startingCell = req.body.startingCell;
     }
 
     if (body.accessToken !== undefined && body.accessToken !== '') {
@@ -288,9 +485,6 @@ module.exports.UpdateValues = async function (req, res) {
         endingCell = body.endingCell;
     } else {
         console.log("ISSUE: EndingCell not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the ending cell details", false, undefined);
-        res.end(jsonString);
     }
 
     if (body.majorDimension !== undefined && body.majorDimension !== '') {
@@ -307,7 +501,6 @@ module.exports.UpdateValues = async function (req, res) {
         jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
         res.end(jsonString);
     }
-
 
     if (body.sheetName !== undefined && body.sheetName !== '') {
         sheetName = body.sheetName;
@@ -327,40 +520,6 @@ module.exports.UpdateValues = async function (req, res) {
         res.end(jsonString);
     }
 
-    // accessToken = body.accessToken;
-    // addOption = body.addOption;
-    // endingCell = body.endingCell;
-    // majorDimension = body.majorDimension;
-    // spreadsheetID = body.spreadsheetID;
-    // sheetName = body.sheetName;
-    // startingCell = body.startingCell;
-
-    // if (accessToken === "") {
-    //     console.log("AccessToken is empty")
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Access Token is entered", false, undefined);
-    //     res.end(jsonString);
-    // }
-    // if (spreadsheetID === "") {
-    //     console.log("SpreadsheetID is empty")
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Spreadsheet ID is entered", false, undefined);
-    //     res.end(jsonString);
-    // }
-    // if (sheetName === "") {
-    //     console.log("SheetName is empty")
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Sheet Name is entered", false, undefined);
-    //     res.end(jsonString);
-    // }
-    // if (endingCell === "") {
-    //     console.log("EndingCell is empty")
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Ending Cell is entered", false, undefined);
-    //     res.end(jsonString);
-    // }
-    // if (startingCell === "") {
-    //     console.log("StartingCell is empty")
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the Starting Cell is entered", false, undefined);
-    //     res.end(jsonString);
-    // }
-
     if (fieldValidationDone !== false) {
 
         addOption = addOption.toLowerCase();
@@ -371,6 +530,10 @@ module.exports.UpdateValues = async function (req, res) {
                 const sheets = google.sheets({ version: 'v4', auth });
 
                 let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+                if (endingCell == "") {
+                    changeRange = sheetName + '!' + startingCell;
+                }
 
                 if (addOption === 'overwrite') {
                     sheets.spreadsheets.values.update({
@@ -432,6 +595,367 @@ module.exports.UpdateValues = async function (req, res) {
     }
 }
 
+module.exports.ClearValues = async function (req, res) {
+
+    console.log("\n==================== ClearValues Internal method ====================\n");
+
+    // console.log("===== request body ======");
+    // console.log(req.body);
+
+    let body;
+    let accessToken = "";
+    let endingCell = "";
+    let spreadsheetID = "";
+    let sheetName = "";
+    let startingCell = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.endingCell !== undefined && body.endingCell !== '') {
+        endingCell = body.endingCell;
+    } else {
+        console.log("ISSUE: EndingCell not entered!");
+    }
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.startingCell !== undefined && body.startingCell !== '') {
+        startingCell = body.startingCell;
+    } else {
+        console.log("ISSUE: StartingCell not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+                if (endingCell == "") {
+                    changeRange = sheetName + '!' + startingCell;
+                }
+
+                sheets.spreadsheets.values.clear({
+                    // spreadsheetId: req.body.spreadsheetID,
+                    spreadsheetId: spreadsheetID,
+                    range: changeRange,
+                    resource: {
+                        'range': changeRange
+                    }
+                }, (err, result) => {
+                    if (err) {
+                        // Handle error.
+                        console.log('Error occurred in clearing cells: ' + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cell clear has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        // console.log(result);
+                        console.log('Successfully cleared the cells');
+                        // console.log('%d cells updated.', result.data,updates.updatedCells);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully cleared", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
+module.exports.DeleteValues = async function (req, res) {
+    //TODO
+    console.log("\n==================== DeleteValues Internal method ====================\n");
+
+    // console.log("===== request body ======");
+    // console.log(req.body);
+
+    let body;
+    let accessToken = "";
+    let addOption = "append"; // overwrite or append
+    let endingCell = "";
+    let majorDimension = "ROWS";
+    let spreadsheetID = "";
+    let sheetName = "";
+    let startingCell = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.endingCell !== undefined && body.endingCell !== '') {
+        endingCell = body.endingCell;
+    } else {
+        console.log("ISSUE: EndingCell not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the ending cell details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.startingCell !== undefined && body.startingCell !== '') {
+        startingCell = body.startingCell;
+    } else {
+        console.log("ISSUE: StartingCell not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        addOption = addOption.toLowerCase();
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+                sheets.spreadsheets.values.clear({
+                    // spreadsheetId: req.body.spreadsheetID,
+                    spreadsheetId: spreadsheetID,
+                    range: changeRange,
+                    resource: {
+                        'range': changeRange
+                    }
+                }, (err, result) => {
+                    if (err) {
+                        // Handle error.
+                        console.log('Error occurred in updating cells: ' + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        // console.log(result);
+                        console.log('Successfully updated the cells');
+                        // console.log('%d cells updated.', result.data,updates.updatedCells);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cells successfully updated", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
+module.exports.DeleteRows = async function (req, res) {
+
+    console.log("\n==================== DeleteRows Internal method ====================\n");
+
+    // console.log("===== request body ======");
+    // console.log(req.body);
+
+    let body;
+    let accessToken = "";
+    let spreadsheetID = "";
+    let sheetID = "";
+    let startingRowIndex = "";
+    let endingRowIndex = "";
+    let deleteByRowIndexOrRowNumber = "index";  // "index" OR "number"
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    //////////// deleting row index //////////////////////
+    if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
+        deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
+    } else {
+        console.log("ISSUE: DeleteByRowIndexOrRowNumber not entered!");
+    }
+
+    if (deleteByRowIndexOrRowNumber === "number") {
+        if (body.startingRowNumber !== undefined && body.startingRowNumber !== '') {
+            startingRowIndex = parseInt(body.startingRowNumber) - 1;
+        } else {
+            console.log("ISSUE: StartingRowNumber not entered!");
+            fieldValidationDone = false;
+            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row number details", false, undefined);
+            res.end(jsonString);
+        }
+
+        if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
+            endingRowNumber = body.endingRowNumber - 1;
+        } else {
+            console.log("ISSUE: EndingRowNumber not entered!");
+            endingRowIndex = parseInt(startingRowIndex) + 1;
+        }
+    }
+    else {
+        if (body.startingRowIndex !== undefined && body.startingRowIndex !== '') {
+            startingRowIndex = parseInt(body.startingRowIndex);
+        } else {
+            console.log("ISSUE: StartingRowIndex not entered!");
+            fieldValidationDone = false;
+            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row index details", false, undefined);
+            res.end(jsonString);
+        }
+
+        if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
+            endingRowIndex = body.endingRowIndex;
+        } else {
+            console.log("ISSUE: EndingRowIndex not entered!");
+            endingRowIndex = parseInt(startingRowIndex) + 1;
+        }
+    }
+    //////////////////////////////////////////////////////////////////
+
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    if (body.sheetID !== undefined && body.sheetID !== '') {
+        sheetID = body.sheetID;
+    } else {
+        console.log("ISSUE: SheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                const request = {
+                    // The ID of the spreadsheet
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+                        "requests": [
+                            {
+                                "deleteDimension": {
+                                    "range": {
+                                        "sheetId": sheetID,
+                                        "dimension": "ROWS",
+                                        "startIndex": startingRowIndex,
+                                        "endIndex": endingRowIndex
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+                sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                    if (err) {
+                        // Handle error.
+                        console.log(err);
+                        jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log(response);
+                        // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
 // function workingWithCells(key, res) {
 //     var doc = new GoogleSpreadsheet('1hgz0fZ5IG25MCFk7tr_76epmnU8FgV9hI0lYXvjtn9U');
 //     var sheet;
@@ -481,6 +1005,49 @@ module.exports.UpdateValues = async function (req, res) {
 
 
 // }
+
+module.exports.GetSheetDataBySpreadsheetID = async function (req, res) {
+//TODO
+    console.log("\n==================== GetSheetDataBySpreadsheetID Internal method ====================\n");
+
+    await getOAuth2ClientByAccessToken(req.body.accessToken)
+        .then(function (auth) {
+            // Do NOT rename "auth" field to anyother name, it will stop working
+            const sheets = google.sheets({ version: 'v4', auth });
+
+            // spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+            // range: 'Class Data!A1:C',
+
+            sheets.spreadsheets.get({
+                spreadsheetId: req.body.spreadsheetID,
+                fields: "sheets.properties"
+            }, (err, result) => {
+                if (err) {
+                    console.log('The API returned an error: ' + err);
+                    res.end('The API returned an error: ' + err);
+                    return;
+                }
+                const rows = result.data.values;
+                if (rows.length) {
+                    console.log('Name, Major:');
+                    // Print columns A and E, which correspond to indices 0 and 4.
+                    rows.map((row) => {
+                        console.log(`${row[0]}`);
+                    });
+                    res.end(rows);
+                } else {
+                    console.log('No data found.');
+                }
+            });
+
+        })
+        .catch(function (error) {
+            console.log(error);
+            res.end(error);
+            return;
+        })
+
+}
 
 module.exports.GetData = async function (req, res) {
 
@@ -573,6 +1140,118 @@ module.exports.GetData = async function (req, res) {
     //             return;
     //         });
     // });
+}
+
+module.exports.GetDataByRange = async function (req, res) {
+
+    console.log("\n==================== GetDataByRange Internal method ====================\n");
+
+    let body;
+    let accessToken = "";
+    let endingCell = "";
+    let spreadsheetID = "";
+    let sheetName = "";
+    let startingCell = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.endingCell !== undefined && body.endingCell !== '') {
+        endingCell = body.endingCell;
+    } else {
+        console.log("ISSUE: EndingCell not entered!");
+    }
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.startingCell !== undefined && body.startingCell !== '') {
+        startingCell = body.startingCell;
+    } else {
+        console.log("ISSUE: StartingCell not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+                // Do NOT rename "auth" field to anyother name, it will stop working
+                // const sheets = google.sheets({ version: 'v4', auth });
+                var sheets = google.sheets('v4');
+
+                // spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+                // range: 'Class Data!A1:C',
+
+                let cellRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+                if (endingCell == "") {
+                    cellRange = sheetName + '!' + startingCell;
+                }
+
+                sheets.spreadsheets.values.get({
+                    spreadsheetId: spreadsheetID,
+                    range: cellRange,
+                    majorDimension: "ROWS",
+                    auth: auth
+                }, function (err, result) {
+                    if (err) {
+                        console.log("The API returned an error: " + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "The API returned an error: " + err, false, undefined);
+                        res.end(jsonString);
+                    }
+                    else {
+                        console.log(result.data);
+
+                        let sheetValues = [];
+
+                        if (result.data.values !== undefined && result.data.values !== '') {
+                            sheetValues = result.data.values;
+                        }
+
+                        jsonString = messageFormatter.FormatMessage(undefined, "Values retrieved successfully", true, sheetValues);
+                        res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log("An exception was thrown: " + error);
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception was thrown: " + error, false, undefined);
+                res.end(jsonString);
+            })
+    }
 }
 
 function listMajors(auth2) {
@@ -714,7 +1393,7 @@ let getTokenFromTypeFormByRefreshT = (code) => {
     });
 }
 
-let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type) => {
+let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type, userSub) => {
     return new Promise((resolve, reject) => {
         let tokenData = {
             access_token: access_token,
@@ -723,7 +1402,8 @@ let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_
             refresh_token: refresh_token,
             scope: scope,
             tenant: tenant,
-            token_type: token_type
+            token_type: token_type,
+            userSub: userSub
         };
 
         googlesheets.findOneAndUpdate({
@@ -742,6 +1422,40 @@ let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_
                     resolve(jsonString);
                 }
             });
+
+        // NEW WAY
+
+        // company: {type: Number, required: true},
+        // connectionID: {type: String, required: true},
+        // connectionType: {type: String, required: true},
+        // created_at: {type:Date,default: Date.now},
+        // description: {type: String},
+        // enable: {type: Boolean, required: true},
+        // image: {type: String},
+        // integrationConnections: {type: Array},
+        // integrationData: {type: Array},
+        // integrationName: {type: String, required: true},
+        // state: {type: String, required: true},
+        // tenant: {type: Number, required: true},
+        // updated_at: {type:Date,default: Date.now},
+        // userSub: {type: String, required: true},
+
+
+        // connections.findOneAndUpdate({
+        //     'connectionID': connectionID
+        // }, tokenData, {
+        //         upsert: true
+        //     }, function (err, _tokenDataResult) {
+        //         if (err) {
+        //             console.log("Error occurred while saving token data: " + err);
+        //             jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token data", false, undefined);
+        //             reject(jsonString);
+        //         } else {
+        //             console.log("Successfully retrieved and saved token data");
+        //             jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved and saved token data", true, undefined);
+        //             resolve(jsonString);
+        //         }
+        //     });
     });
 }
 
@@ -806,7 +1520,7 @@ let getTokenDataByAccessToken = (accessToken) => {
         googlesheets.findOne({
             'access_token': accessToken
         }, function (err, _tokenResult) {
-            // console.log(_recordResult);
+            console.log(_tokenResult);
             if (err) {
                 console.log("Error occurred while getting token data: " + err);
                 jsonString = messageFormatter.FormatMessage(err, "Error occurred while getting token data", false, undefined);
@@ -832,6 +1546,9 @@ let getOAuth2ClientByAccessToken = (accessToken) => {
 
         const oAuth2Client = new google.auth.OAuth2(
             config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     "535313902488-e6u9tb709cfdl824cl14hh4icag9ip32.apps.googleusercontent.com", "BxuRRx0Bok7LOgxhypOBMyTW", "urn:ietf:wg:oauth:2.0:oob");
 
 
         await getTokenDataByAccessToken(accessToken)

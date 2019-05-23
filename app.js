@@ -49,8 +49,15 @@ server.get('/DBF/API/:version/GoogleSpreadsheetService/GetAuthURL', functions.Ge
 server.post('/DBF/API/:version/GoogleSpreadsheetService/GetTokenByCode', functions.GetTokenByCode);
 server.get('/DBF/API/:version/GoogleSpreadsheetService/Test', functions.Test);
 server.post('/DBF/API/:version/GoogleSpreadsheetService/GetData', functions.GetData);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/GetDataByRange', functions.GetDataByRange);
 server.post('/DBF/API/:version/GoogleSpreadsheetService/CreateSpreadSheet', functions.CreateSpreadSheet);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/CreateSheet', functions.CreateSheet);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/CopySheetToAnotherSpreadsheet', functions.CopySheetToAnotherSpreadsheet);
 server.post('/DBF/API/:version/GoogleSpreadsheetService/UpdateValues', functions.UpdateValues);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/DeleteValues', functions.DeleteValues);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/DeleteRows', functions.DeleteRows);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/ClearValues', functions.ClearValues);
+server.post('/DBF/API/:version/GoogleSpreadsheetService/GetSheetDataBySpreadsheetID', functions.GetSheetDataBySpreadsheetID);
 
 
 

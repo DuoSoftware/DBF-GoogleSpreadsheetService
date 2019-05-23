@@ -14,6 +14,6 @@ var userMigrationScheme = new Schema({
 
 
 
-module.exports.usermigration = mongoose.model('usermigration', userScheme);
+module.exports.usermigration = mongoose.model('usermigration', userMigrationScheme);
 
 
