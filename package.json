@@ -15,7 +15,7 @@
     "circular-json": "^0.5.9",
     "config": "^3.0.1",
     "cors": "^2.8.5",
-    "dbf-dbmodels": "^1.0.184",
+    "dbf-dbmodels": "^1.0.193",
     "dbf-permissionmanager": "^1.0.10",
     "dbf-workspacemanager": "^1.0.5",
     "dvp-common-lite": "^1.0.1",

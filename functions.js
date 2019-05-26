@@ -6,8 +6,8 @@ const mongoose = require("mongoose");
 const config = require('config');
 const async = require('async');
 const request = require('request');
-const googlesheets = require('dbf-dbmodels/Models/GoogleSheets').googlesheets;
-const googlesheetslog = require('dbf-dbmodels/Models/GoogleSheets').googlesheetslog;
+const googlesheetsconnections = require('dbf-dbmodels/Models/GoogleSheets').googlesheetsconnections;
+// const googlesheetslog = require('dbf-dbmodels/Models/GoogleSheets').googlesheetslog;
 const connections = require('dbf-dbmodels/Models/GoogleSheets').connections;
 const uuidv1 = require('uuid/v1');
 const JSONC = require('circular-json');
@@ -18,7 +18,7 @@ const { google } = require('googleapis');
 var GoogleSpreadsheet = require('google-spreadsheet');
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
@@ -42,16 +42,7 @@ module.exports.GetAuthURL = async function (req, res, next) {
     // const oAuth2Client = new google.auth.OAuth2(
     //     client_id, client_secret, redirect_uris[0]);
 
-    const oAuth2Client = new google.auth.OAuth2(
-        config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
-
-    // const oAuth2Client = new google.auth.OAuth2(
-    //     "535313902488-9qn6t0lfm0j2cvr6aihg71oaair4o06o.apps.googleusercontent.com", "UiGY9gNi3eVhJqoxydZ5PRnS", "https://googlesheetsdev.plus.smoothflow.io/DBF/API/5/GoogleSpreadsheetService/Test");
-
-    // const oAuth2Client = new google.auth.OAuth2(
-    //     "535313902488-e6u9tb709cfdl824cl14hh4icag9ip32.apps.googleusercontent.com", "BxuRRx0Bok7LOgxhypOBMyTW", "https://googlesheetsdev.plus.smoothflow.io/DBF/API/5/GoogleSpreadsheetService/Test");
-
-
+    const oAuth2Client = new google.auth.OAuth2(config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
     const authUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
@@ -206,55 +197,75 @@ module.exports.CreateSpreadSheet = async function (req, res) {
     console.log("\n==================== CreateSpreadSheet Internal method ====================\n");
     // console.log(req);
 
+    let body;
     let accessToken = "";
+    let connectionID = "";
+    let fieldValidationDone = true;
 
     if (typeof req.body === 'string') {
-        let body = JSON.parse(req.body);
-        accessToken = body.accessToken;
+        body = JSON.parse(req.body);
     }
     else {
-        accessToken = req.body.accessToken;
+        body = req.body;
     }
 
-    if (accessToken === "") {
-        console.log("AccessToken is empty")
-        jsonString = messageFormatter.FormatMessage(undefined, "Please make sure the access token is entered", false, undefined);
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
         res.end(jsonString);
     }
 
-    await getOAuth2ClientByAccessToken(accessToken)
-        .then(function (auth) {
 
-            const sheets = google.sheets({ version: 'v4', auth });
+    if (fieldValidationDone !== false) {
 
-            const resource = {
-                properties: {
-                    title: req.body.title
-                }
-            };
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
+            .then(function (auth) {
 
-            sheets.spreadsheets.create({
-                resource,
-                fields: 'spreadsheetId',
-            }, (err, spreadsheet) => {
-                if (err) {
-                    // Handle error.
-                    console.log(err);
-                    jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet creation has failed", false, undefined);
-                    res.end(jsonString);
-                } else {
-                    console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
-                    jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet successfully created", true, spreadsheet.data.spreadsheetId);
-                    res.end(jsonString);
-                }
-            });
+                const sheets = google.sheets({ version: 'v4', auth });
 
-        })
-        .catch(function (error) {
-            console.log(error);
-            res.end(error);
-            return;
-        })
+                const resource = {
+                    properties: {
+                        title: req.body.title
+                    }
+                };
+
+                sheets.spreadsheets.create({
+                    resource,
+                    fields: 'spreadsheetId',
+                }, (err, response) => {
+                    if (err) {
+                        console.log("Spreadsheet creation has failed: " + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet creation has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log("Spreadsheet successfully created: " + JSON.stringify(response.data));
+                        // console.log(`Spreadsheet ID: ${response.data.spreadsheetId}`);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet successfully created", true, response.data.spreadsheetId);
+                        res.end(jsonString);
+                    }
+                });
+
+            })
+            .catch(function (error) {
+                console.log("An exception occurred while creating spreadsheet");
+                console.log(error);
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while creating spreadsheet", false, error);
+                reject(jsonString);
+            })
+    }
 }
 
 module.exports.CreateSheet = async function (req, res) {
@@ -264,6 +275,7 @@ module.exports.CreateSheet = async function (req, res) {
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let spreadsheetID = "";
     let sheetName = "";
     let fieldValidationDone = true;
@@ -275,12 +287,21 @@ module.exports.CreateSheet = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
     } else {
-        console.log("ISSUE: AccessToken not entered!");
+        console.log("ISSUE: ConnectionID not entered!");
         fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
         res.end(jsonString);
     }
 
@@ -304,7 +325,8 @@ module.exports.CreateSheet = async function (req, res) {
 
     if (fieldValidationDone !== false) {
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
 
                 const sheets = google.sheets({ version: 'v4', auth });
@@ -313,7 +335,6 @@ module.exports.CreateSheet = async function (req, res) {
                     // The ID of the spreadsheet
                     "spreadsheetId": spreadsheetID,
                     "resource": {
-
                         "requests": [
                             {
                                 "addSheet": {
@@ -328,22 +349,22 @@ module.exports.CreateSheet = async function (req, res) {
 
                 sheets.spreadsheets.batchUpdate(request, (err, response) => {
                     if (err) {
-                        // Handle error.
-                        console.log(err);
+                        console.log("Sheet creation has failed: " + err);
                         jsonString = messageFormatter.FormatMessage(err, "Sheet creation has failed", false, undefined);
                         res.end(jsonString);
                     } else {
-                        console.log(response);
+                        console.log("Spreadsheet successfully created: " + JSON.stringify(response.data));
                         // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
-                        jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet successfully created", true, spreadsheet.data.spreadsheetId);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Spreadsheet successfully created", true, response.data.spreadsheetId);
                         res.end(jsonString);
                     }
                 });
             })
             .catch(function (error) {
+                console.log("An exception occurred while creating sheet");
                 console.log(error);
-                res.end(error);
-                return;
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while creating sheet", false, error);
+                reject(jsonString);
             })
     }
 }
@@ -356,6 +377,7 @@ module.exports.CopySheetToAnotherSpreadsheet = async function (req, res) {
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let spreadsheetID = "";
     let sheetID = "";
     let destinationSpreadsheetID = "";
@@ -368,14 +390,14 @@ module.exports.CopySheetToAnotherSpreadsheet = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
-    } else {
-        console.log("ISSUE: AccessToken not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-        res.end(jsonString);
-    }
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
     if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
         spreadsheetID = body.spreadsheetID;
@@ -404,9 +426,20 @@ module.exports.CopySheetToAnotherSpreadsheet = async function (req, res) {
         res.end(jsonString);
     }
 
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
     if (fieldValidationDone !== false) {
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
 
                 var sheets = google.sheets('v4');
@@ -422,22 +455,22 @@ module.exports.CopySheetToAnotherSpreadsheet = async function (req, res) {
 
                 sheets.spreadsheets.sheets.copyTo(request, function (err, response) {
                     if (err) {
-                        // Handle error.
                         console.log('Error occurred in copying the sheet: ' + err);
                         jsonString = messageFormatter.FormatMessage(undefined, "Copying the sheet has failed", false, undefined);
                         res.end(jsonString);
                     } else {
-                        console.log(response);
                         console.log('Successfully copied the sheet');
+                        console.log(response);
                         jsonString = messageFormatter.FormatMessage(undefined, "Sheet successfully copied", true, undefined);
                         res.end(jsonString);
                     }
                 });
             })
             .catch(function (error) {
+                console.log("An exception occurred while copying sheet");
                 console.log(error);
-                res.end(error);
-                return;
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while copying sheet", false, error);
+                reject(jsonString);
             })
     }
 }
@@ -451,12 +484,14 @@ module.exports.UpdateValues = async function (req, res) {
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let addOption = "append"; // overwrite or append
     let endingCell = "";
     let majorDimension = "ROWS";
     let spreadsheetID = "";
     let sheetName = "";
     let startingCell = "";
+    let values = "";
     let fieldValidationDone = true;
 
     if (typeof req.body === 'string') {
@@ -466,14 +501,14 @@ module.exports.UpdateValues = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
-    } else {
-        console.log("ISSUE: AccessToken not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-        res.end(jsonString);
-    }
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
     if (body.addOption !== undefined && body.addOption !== '') {
         addOption = body.addOption;
@@ -515,25 +550,54 @@ module.exports.UpdateValues = async function (req, res) {
         startingCell = body.startingCell;
     } else {
         console.log("ISSUE: StartingCell not entered!");
+        // fieldValidationDone = false;
+        // jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        // res.end(jsonString);
+    }
+
+    if (body.values !== undefined && body.values !== '') {
+        values = body.values;
+    } else {
+        console.log("ISSUE: Values not entered!");
+        // fieldValidationDone = false;
+        // jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        // res.end(jsonString);
+    }
+
+    // console.log(values);
+    let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+    if (endingCell == "" && startingCell == "") {
+        changeRange = sheetName;
+    }
+    else if (endingCell == "" && startingCell != "") {
+        changeRange = sheetName + '!' + startingCell;
+    }
+    else if (endingCell != "" && startingCell == "") {
         fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details", false, undefined);
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting cell details if you enter ending cell details", false, undefined);
         res.end(jsonString);
     }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
 
     if (fieldValidationDone !== false) {
 
         addOption = addOption.toLowerCase();
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
 
                 const sheets = google.sheets({ version: 'v4', auth });
-
-                let changeRange = sheetName + '!' + startingCell + ':' + endingCell;
-
-                if (endingCell == "") {
-                    changeRange = sheetName + '!' + startingCell;
-                }
 
                 if (addOption === 'overwrite') {
                     sheets.spreadsheets.values.update({
@@ -544,7 +608,7 @@ module.exports.UpdateValues = async function (req, res) {
                         resource: {
                             'range': changeRange,
                             'majorDimension': majorDimension,
-                            'values': req.body.values
+                            'values': values
                         }
                     }, (err, result) => {
                         if (err) {
@@ -588,9 +652,10 @@ module.exports.UpdateValues = async function (req, res) {
                 }
             })
             .catch(function (error) {
+                console.log("An exception occurred while updating values");
                 console.log(error);
-                res.end(error);
-                return;
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while updating values", false, error);
+                reject(jsonString);
             })
     }
 }
@@ -604,6 +669,7 @@ module.exports.ClearValues = async function (req, res) {
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let endingCell = "";
     let spreadsheetID = "";
     let sheetName = "";
@@ -617,14 +683,14 @@ module.exports.ClearValues = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
-    } else {
-        console.log("ISSUE: AccessToken not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-        res.end(jsonString);
-    }
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
     if (body.endingCell !== undefined && body.endingCell !== '') {
         endingCell = body.endingCell;
@@ -659,9 +725,20 @@ module.exports.ClearValues = async function (req, res) {
         res.end(jsonString);
     }
 
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
     if (fieldValidationDone !== false) {
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
 
                 const sheets = google.sheets({ version: 'v4', auth });
@@ -711,6 +788,7 @@ module.exports.DeleteValues = async function (req, res) {
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let addOption = "append"; // overwrite or append
     let endingCell = "";
     let majorDimension = "ROWS";
@@ -726,14 +804,14 @@ module.exports.DeleteValues = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
-    } else {
-        console.log("ISSUE: AccessToken not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-        res.end(jsonString);
-    }
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
     if (body.endingCell !== undefined && body.endingCell !== '') {
         endingCell = body.endingCell;
@@ -772,11 +850,22 @@ module.exports.DeleteValues = async function (req, res) {
         res.end(jsonString);
     }
 
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
     if (fieldValidationDone !== false) {
 
         addOption = addOption.toLowerCase();
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
 
                 const sheets = google.sheets({ version: 'v4', auth });
@@ -822,10 +911,11 @@ module.exports.DeleteRows = async function (req, res) {
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let spreadsheetID = "";
     let sheetID = "";
-    let startingRowIndex = "";
-    let endingRowIndex = "";
+    let startingRowIndex = ""; //Row number = row index + 1
+    let endingRowIndex = ""; //Row number = row index + 1
     let deleteByRowIndexOrRowNumber = "index";  // "index" OR "number"
     let fieldValidationDone = true;
 
@@ -836,17 +926,17 @@ module.exports.DeleteRows = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
-    } else {
-        console.log("ISSUE: AccessToken not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-        res.end(jsonString);
-    }
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
 
-    //////////// deleting row index //////////////////////
+    //////////// getting deleting row index //////////////////////
     if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
         deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
     } else {
@@ -864,7 +954,7 @@ module.exports.DeleteRows = async function (req, res) {
         }
 
         if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
-            endingRowNumber = body.endingRowNumber - 1;
+            endingRowIndex = parseInt(body.endingRowNumber) - 1;
         } else {
             console.log("ISSUE: EndingRowNumber not entered!");
             endingRowIndex = parseInt(startingRowIndex) + 1;
@@ -881,13 +971,13 @@ module.exports.DeleteRows = async function (req, res) {
         }
 
         if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
-            endingRowIndex = body.endingRowIndex;
+            endingRowIndex = parseInt(body.endingRowIndex);
         } else {
             console.log("ISSUE: EndingRowIndex not entered!");
             endingRowIndex = parseInt(startingRowIndex) + 1;
         }
     }
-    //////////////////////////////////////////////////////////////////
+    //////////// end getting deleting row index //////////////////////
 
 
     if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
@@ -909,9 +999,20 @@ module.exports.DeleteRows = async function (req, res) {
         res.end(jsonString);
     }
 
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
     if (fieldValidationDone !== false) {
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
 
                 const sheets = google.sheets({ version: 'v4', auth });
@@ -945,6 +1046,192 @@ module.exports.DeleteRows = async function (req, res) {
                         // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
                         jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
                         res.end(jsonString);
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
+
+module.exports.ClearRows = async function (req, res) {
+
+    console.log("\n==================== ClearRows Internal method ====================\n");
+
+    // console.log("===== request body ======");
+    // console.log(req.body);
+
+    let body;
+    let accessToken = "";
+    let connectionID = "";
+    let spreadsheetID = "";
+    let sheetID = "";
+    let startingRowIndex = ""; //Row number = row index + 1
+    let endingRowIndex = ""; //Row number = row index + 1
+    let deleteByRowIndexOrRowNumber = "index";  // "index" OR "number"
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+
+    //////////// getting clearing row index //////////////////////
+    if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
+        deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
+    } else {
+        console.log("ISSUE: DeleteByRowIndexOrRowNumber not entered!");
+    }
+
+    if (deleteByRowIndexOrRowNumber === "number") {
+        if (body.startingRowNumber !== undefined && body.startingRowNumber !== '') {
+            startingRowIndex = parseInt(body.startingRowNumber) - 1;
+        } else {
+            console.log("ISSUE: StartingRowNumber not entered!");
+            fieldValidationDone = false;
+            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row number details", false, undefined);
+            res.end(jsonString);
+        }
+
+        if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
+            endingRowIndex = parseInt(body.endingRowNumber) - 1;
+        } else {
+            console.log("ISSUE: EndingRowNumber not entered!");
+            endingRowIndex = parseInt(startingRowIndex) + 1;
+        }
+    }
+    else {
+        if (body.startingRowIndex !== undefined && body.startingRowIndex !== '') {
+            startingRowIndex = parseInt(body.startingRowIndex);
+        } else {
+            console.log("ISSUE: StartingRowIndex not entered!");
+            fieldValidationDone = false;
+            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row index details", false, undefined);
+            res.end(jsonString);
+        }
+
+        if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
+            endingRowIndex = parseInt(body.endingRowIndex);
+        } else {
+            console.log("ISSUE: EndingRowIndex not entered!");
+            endingRowIndex = parseInt(startingRowIndex) + 1;
+        }
+    }
+    //////////// end getting clearing row index //////////////////////
+
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    if (body.sheetID !== undefined && body.sheetID !== '') {
+        sheetID = body.sheetID;
+    } else {
+        console.log("ISSUE: SheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    if (fieldValidationDone !== false) {
+
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                const request = {
+                    // The ID of the spreadsheet
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+                        "requests": [
+                            {
+                                "deleteDimension": {
+                                    "range": {
+                                        "sheetId": sheetID,
+                                        "dimension": "ROWS",
+                                        "startIndex": startingRowIndex,
+                                        "endIndex": endingRowIndex
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+                sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                    if (err) {
+                        // Handle error.
+                        console.log(err);
+                        jsonString = messageFormatter.FormatMessage(err, "Row clearing has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log(response);
+
+                        const request2 = {
+                            // The ID of the spreadsheet
+                            "spreadsheetId": spreadsheetID,
+                            "resource": {
+                                "requests": [
+                                    {
+                                        "insertDimension": {
+                                            "range": {
+                                                "sheetId": sheetID,
+                                                "dimension": "ROWS",
+                                                "startIndex": startingRowIndex,
+                                                "endIndex": endingRowIndex
+                                            },
+                                            "inheritFromBefore": true
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                        sheets.spreadsheets.batchUpdate(request2, (err2, response2) => {
+                            if (err2) {
+                                // Handle error.
+                                console.log(err);
+                                jsonString = messageFormatter.FormatMessage(err, "Row clearing has failed!", false, undefined);
+                                res.end(jsonString);
+                            } else {
+                                console.log(response2);
+                                // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                                jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully cleared!", true, undefined);
+                                res.end(jsonString);
+                            }
+                        });
                     }
                 });
             })
@@ -1006,47 +1293,204 @@ module.exports.DeleteRows = async function (req, res) {
 
 // }
 
-module.exports.GetSheetDataBySpreadsheetID = async function (req, res) {
-//TODO
-    console.log("\n==================== GetSheetDataBySpreadsheetID Internal method ====================\n");
+module.exports.GetSpreadsheetListByToken = async function (req, res) {
 
-    await getOAuth2ClientByAccessToken(req.body.accessToken)
-        .then(function (auth) {
-            // Do NOT rename "auth" field to anyother name, it will stop working
-            const sheets = google.sheets({ version: 'v4', auth });
+    console.log("\n==================== GetSpreadsheetListByToken Internal method ====================\n");
 
-            // spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-            // range: 'Class Data!A1:C',
+    let body;
+    let accessToken = "";
+    let fieldValidationDone = true;
 
-            sheets.spreadsheets.get({
-                spreadsheetId: req.body.spreadsheetID,
-                fields: "sheets.properties"
-            }, (err, result) => {
-                if (err) {
-                    console.log('The API returned an error: ' + err);
-                    res.end('The API returned an error: ' + err);
-                    return;
-                }
-                const rows = result.data.values;
-                if (rows.length) {
-                    console.log('Name, Major:');
-                    // Print columns A and E, which correspond to indices 0 and 4.
-                    rows.map((row) => {
-                        console.log(`${row[0]}`);
-                    });
-                    res.end(rows);
-                } else {
-                    console.log('No data found.');
-                }
-            });
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
 
-        })
-        .catch(function (error) {
-            console.log(error);
-            res.end(error);
-            return;
-        })
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByAccessToken(accessToken)
+            .then(function (auth) {
+                // Do NOT rename "auth" field to anyother name, it will stop working
+                const drive = google.drive({ version: 'v3', auth });
+
+                drive.files.list({
+                    q: "mimeType='application/vnd.google-apps.spreadsheet'",
+                    fields: 'nextPageToken, files(id, name)'
+                }, (err, response) => {
+                    if (err) {
+                        console.log("Error occurred while getting spreadsheet list by token: " + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Cell update has failedError occurred while getting spreadsheet list by token", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log("Successfully retrieved spreadsheet list");
+                        if (response.data !== undefined) {
+                            if (response.data.files !== undefined) {
+                                // console.log(response.data.files);
+                                jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved spreadsheet list", true, response.data.files);
+                                res.end(jsonString);
+                            }
+                            else {
+                                console.log("No files retrieved");
+                                jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved spreadsheet list", true, []);
+                                res.end(jsonString);
+                            }
+                        }
+                        else {
+                            console.log("No data retrieved");
+                            jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved spreadsheet list", true, []);
+                            res.end(jsonString);
+                        }
+                    }
+                });
+
+            })
+            .catch(function (error) {
+                console.log("An exception occurred while getting spreadsheet list by token");
+                console.log(error);
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while getting spreadsheet list by token", false, error);
+                reject(jsonString);
+            })
+    }
+}
+
+module.exports.GetSheetsListBySpreadsheetID = async function (req, res) {
+
+    console.log("\n==================== GetSheetsListBySpreadsheetID Internal method ====================\n");
+
+    let body;
+    let accessToken = "";
+    let connectionID = "";
+    let spreadsheetID = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
+            .then(function (auth) {
+                // Do NOT rename "auth" field to anyother name, it will stop working
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                // spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+                // range: 'Class Data!A1:C',
+
+                sheets.spreadsheets.get({
+                    spreadsheetId: spreadsheetID,
+                    fields: "sheets.properties"
+                }, (err, response) => {
+                    if (err) {
+                        console.log("Error occurred while getting sheets list by spreadsheet ID: " + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Error occurred while getting sheets list by spreadsheet ID", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log("Successfully retrieved sheets list by spreadsheet ID");
+                        if (response.data !== undefined) {
+                            if (response.data.sheets !== undefined) {
+                                // console.log(response.data.files);
+
+                                let sheetsList = response.data.sheets;
+                                let finalSheetsList = [];
+
+                                if (sheetsList.length) {
+                                    sheetsList.forEach(sheetItem => {
+                                        finalSheetsList.push(sheetItem.properties);
+                                    });
+
+                                    jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved sheets list by spreadsheet ID", true, finalSheetsList);
+                                    res.end(jsonString);
+
+                                } else {
+                                    console.log("No sheets retrieved. Empty array!");
+                                    jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved sheets list by spreadsheet ID", true, []);
+                                    res.end(jsonString);
+                                }
+
+
+
+                            }
+                            else {
+                                console.log("No sheets retrieved");
+                                jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved sheets list by spreadsheet ID", true, []);
+                                res.end(jsonString);
+                            }
+                        }
+                        else {
+                            console.log("No data retrieved");
+                            jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved sheets list by spreadsheet ID", true, []);
+                            res.end(jsonString);
+                        }
+                    }
+
+                    // if (err) {
+                    //     console.log('The API returned an error: ' + err);
+                    //     res.end('The API returned an error: ' + err);
+                    //     return;
+                    // }
+                    // const rows = result.data.values;
+                    // if (rows.length) {
+                    //     console.log('Name, Major:');
+                    //     // Print columns A and E, which correspond to indices 0 and 4.
+                    //     rows.map((row) => {
+                    //         console.log(`${row[0]}`);
+                    //     });
+                    //     res.end(rows);
+                    // } else {
+                    //     console.log('No data found.');
+                    // }
+                });
+
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
 }
 
 module.exports.GetData = async function (req, res) {
@@ -1142,12 +1586,287 @@ module.exports.GetData = async function (req, res) {
     // });
 }
 
+module.exports.FilterData = async function (req, res) {
+
+    console.log("\n==================== FilterData Internal method ====================\n");
+
+    // console.log("===== request body ======");
+    // console.log(req.body);
+
+    let body;
+    let accessToken = "";
+    let connectionID = "";
+    let spreadsheetID = "";
+    let sheetID = "";
+    let startingRowIndex = ""; //Row number = row index + 1
+    let endingRowIndex = ""; //Row number = row index + 1
+    let deleteByRowIndexOrRowNumber = "index";  // "index" OR "number"
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+
+    //////////// getting deleting row index //////////////////////
+    if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
+        deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
+    } else {
+        console.log("ISSUE: DeleteByRowIndexOrRowNumber not entered!");
+    }
+
+    if (deleteByRowIndexOrRowNumber === "number") {
+        if (body.startingRowNumber !== undefined && body.startingRowNumber !== '') {
+            startingRowIndex = parseInt(body.startingRowNumber) - 1;
+        } else {
+            console.log("ISSUE: StartingRowNumber not entered!");
+            fieldValidationDone = false;
+            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row number details", false, undefined);
+            res.end(jsonString);
+        }
+
+        if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
+            endingRowIndex = parseInt(body.endingRowNumber) - 1;
+        } else {
+            console.log("ISSUE: EndingRowNumber not entered!");
+            endingRowIndex = parseInt(startingRowIndex) + 1;
+        }
+    }
+    else {
+        if (body.startingRowIndex !== undefined && body.startingRowIndex !== '') {
+            startingRowIndex = parseInt(body.startingRowIndex);
+        } else {
+            console.log("ISSUE: StartingRowIndex not entered!");
+            fieldValidationDone = false;
+            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row index details", false, undefined);
+            res.end(jsonString);
+        }
+
+        if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
+            endingRowIndex = parseInt(body.endingRowIndex);
+        } else {
+            console.log("ISSUE: EndingRowIndex not entered!");
+            endingRowIndex = parseInt(startingRowIndex) + 1;
+        }
+    }
+    //////////// end getting deleting row index //////////////////////
+
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    if (body.sheetID !== undefined && body.sheetID !== '') {
+        sheetID = body.sheetID;
+    } else {
+        console.log("ISSUE: SheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                /////////////////////////////////
+                // // var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+                // var filterSettings = {};
+
+                // // The range of data on which you want to apply the filter.
+                // // optional arguments: startRowIndex, startColumnIndex, endRowIndex, endColumnIndex
+                // filterSettings.range = {
+                //     sheetId: sheetID
+                // };
+
+                // // Criteria for showing/hiding rows in a filter
+                // // https://developers.google.com/sheets/api/reference/rest/v4/FilterCriteria
+                // filterSettings.criteria = {};
+                // var columnIndex = 2;
+                // filterSettings['criteria'][columnIndex] = {
+                //     // 'hiddenValues': ["England", "France"]
+                //     'showValues': ["England", "France"]
+                // };
+
+                // var request = {
+                //     "setBasicFilter": {
+                //         "filter": filterSettings
+                //     }
+                // };
+
+                let filterSettings = {
+                    "range":
+                    {
+                        "sheetId": sheetID
+                    },
+                    "condition": {
+                        "type": "TEXT_CONTAINS",
+                        "values": [
+                            {
+                                "userEnteredValue": "Anna"
+                            }
+                        ]
+                    }
+                }
+                // var request = {
+                //     // The spreadsheet to request.
+                //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                //     resource: {
+
+                //         "setBasicFilter": {
+                //             "filter": filterSettings
+                //         }
+                //     },
+
+                //     // "setBasicFilter": {
+                //     //     "filter": filterSettings
+                //     // }
+
+
+                // };
+
+                // var request = {
+                //     spreadsheetId: spreadsheetID,
+                //     "setBasicFilter": {
+                //         "filter": filterSettings
+                //     }
+                // };
+
+                // auth: authClient,
+                // };
+
+                var request = {
+                    // The spreadsheet to apply the updates to.
+                    spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                    // "includeGridData": true,
+                    resource: {
+                        // A list of updates to apply to the spreadsheet.
+                        // Requests will be applied in the order they are specified.
+                        // If any request is not valid, no requests will be applied.
+                        requests: [{
+                            "setBasicFilter": {
+
+                                "filter": {
+                                    "criteria": {
+                                        0: {
+                                            "condition": {
+                                                "type": "TEXT_CONTAINS",
+                                                "values": [
+                                                    {
+                                                        "userEnteredValue": "name"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    }
+
+                                },
+                            }
+                        }
+                        ],  // TODO: Update placeholder value.
+
+                        // TODO: Add desired properties to the request body.
+                    }
+                };
+
+                sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                    if (err) {
+                        console.log(err);
+                        jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log(response);
+                        // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                        res.end(jsonString);
+                    }
+                });
+                /////////////////////////////////
+
+
+
+
+
+                // const request = {
+                //     // The ID of the spreadsheet
+                //     "spreadsheetId": spreadsheetID,
+                //     "resource": {
+                //         "requests": [
+                //             {
+                //                 "deleteDimension": {
+                //                     "range": {
+                //                         "sheetId": sheetID,
+                //                         "dimension": "ROWS",
+                //                         "startIndex": startingRowIndex,
+                //                         "endIndex": endingRowIndex
+                //                     }
+                //                 }
+                //             }
+                //         ]
+                //     }
+                // }
+                // sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                //     if (err) {
+                //         // Handle error.
+                //         console.log(err);
+                //         jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                //         res.end(jsonString);
+                //     } else {
+                //         console.log(response);
+                //         // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                //         jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                //         res.end(jsonString);
+                //     }
+                // });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
+
 module.exports.GetDataByRange = async function (req, res) {
 
     console.log("\n==================== GetDataByRange Internal method ====================\n");
 
     let body;
     let accessToken = "";
+    let connectionID = "";
     let endingCell = "";
     let spreadsheetID = "";
     let sheetName = "";
@@ -1161,14 +1880,14 @@ module.exports.GetDataByRange = async function (req, res) {
         body = req.body;
     }
 
-    if (body.accessToken !== undefined && body.accessToken !== '') {
-        accessToken = body.accessToken;
-    } else {
-        console.log("ISSUE: AccessToken not entered!");
-        fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-        res.end(jsonString);
-    }
+    // if (body.accessToken !== undefined && body.accessToken !== '') {
+    //     accessToken = body.accessToken;
+    // } else {
+    //     console.log("ISSUE: AccessToken not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+    //     res.end(jsonString);
+    // }
 
     if (body.endingCell !== undefined && body.endingCell !== '') {
         endingCell = body.endingCell;
@@ -1204,9 +1923,20 @@ module.exports.GetDataByRange = async function (req, res) {
         res.end(jsonString);
     }
 
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+
     if (fieldValidationDone !== false) {
 
-        await getOAuth2ClientByAccessToken(accessToken)
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
             .then(function (auth) {
                 // Do NOT rename "auth" field to anyother name, it will stop working
                 // const sheets = google.sheets({ version: 'v4', auth });
@@ -1272,124 +2002,6 @@ function listMajors(auth2) {
         } else {
             console.log('No data found.');
         }
-    });
-}
-
-module.exports.GetFormsByID = async function (req, res) {
-
-    console.log("\n====================GetFormsByID Internal method====================\n");
-
-    // let Schema = mongoose.Schema;
-    // let ObjectId = Schema.ObjectId;
-
-    var company = parseInt(req.user.company);
-    var tenant = parseInt(req.user.tenant);
-
-    console.log(company);
-    console.log(tenant);
-
-    let tokenDataResult = await getTokenData(company, tenant).catch(function (getError) {
-        console.log(getError);
-        res.end(getError);
-        return;
-    });
-
-    console.log(tokenDataResult.length);
-    if (tokenDataResult.length > 0) {
-        if (tokenDataResult[0] !== undefined && tokenDataResult[0] !== null) {
-            // console.log(tokenDataResult[0]);
-            if (tokenDataResult[0].token !== undefined && tokenDataResult[0].token !== null) {
-                // console.log(tokenDataResult[0].token);
-
-                let formsData = await GetFormsByID(tokenDataResult[0].token, req.params.formID).catch(function (getFormsError) {
-                    console.log(getFormsError);
-                    res.end(getFormsError);
-                    return;
-                });
-                res.end(formsData);
-                return;
-            }
-        }
-    }
-}
-
-let getTokenFromTypeForm = (code) => {
-    return new Promise((resolve, reject) => {
-        let uri = "https://api.typeform.com/oauth/token";
-
-        uri = encodeURI(uri);
-
-        request({
-            method: "POST",
-            url: uri,
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: 'grant_type=authorization_code&code=' + code + '&client_id=' + tFKeys.clientID + '&client_secret=' + tFKeys.clientSecret + '&redirect_uri=' + tFKeys.redirectURI
-        }, function (_error, _response, datax) {
-            if (_error) {
-                console.log("An error occured while getting token data: " + _error);
-                jsonString = messageFormatter.FormatMessage(_error, "An error occured while getting token data", false, undefined);
-                reject(jsonString);
-            } else if (datax) {
-                try {
-                    let datay = JSON.parse(datax);
-                    if (datay.access_token === undefined) {
-                        if (datay.description === "Access denied") {
-                            console.log("Access denied for the given code");
-                            jsonString = messageFormatter.FormatMessage(undefined, "Access denied for the given code. If the code is generated with offline scope, the app should be allowed to create limited time tokens", false, undefined);
-                            reject(jsonString);
-
-                        }
-                    }
-                    resolve(datay);
-                } catch (error) {
-                    console.log("An error occured while decoding token data: " + error);
-                    jsonString = messageFormatter.FormatMessage(error, "An error occured while decoding token data", false, undefined);
-                    reject(jsonString);
-                }
-            } else {
-                console.log("Did not receive any data from type form");
-                jsonString = messageFormatter.FormatMessage(undefined, "Did not receive any data from type form", false, undefined);
-                reject(jsonString);
-            }
-        });
-    });
-}
-
-
-let getTokenFromTypeFormByRefreshT = (code) => {
-    return new Promise((resolve, reject) => {
-        let uri = "https://api.typeform.com/oauth/token";
-
-        uri = encodeURI(uri);
-
-        request({
-            method: "POST",
-            url: uri,
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: 'grant_type=refresh_token&refresh_token=<refresh_token>&client_id=<client_id>&client_secret=<client_secret>&scope=forms:read'
-        }, function (_error, _response, datax) {
-
-            if (_error) {
-                console.log(_error);
-                // reject("An error occured while detecting the text");
-            } else if (datax) {
-                console.log(datax);
-                try {
-                    let datay = JSON.parse(datax);
-                    console.log(datay.access_token);
-                    resolve(datay.access_token);
-                } catch (error) {
-                    // reject("An error occured while detecting the text");
-                }
-
-            } else {
-                reject("An error occured while detecting the text");
-            }
-        });
     });
 }
 
@@ -1512,6 +2124,25 @@ let getTokenDataByCompanyTenant = (company, tenant) => {
     });
 }
 
+let getTokenDataByConnectionID = (connectionID) => {
+    return new Promise((resolve, reject) => {
+
+        // getTokenData("1", "51");
+
+        googlesheetsconnections.findOne({
+            'connectionID': connectionID
+        }, function (err, _tokenResult) {
+            // console.log(_recordResult);
+            if (err) {
+                console.log("Error occurred while getting token data: " + err);
+                jsonString = messageFormatter.FormatMessage(err, "Error occurred while getting token data", false, undefined);
+                reject(jsonString);
+            }
+            resolve(_tokenResult);
+        });
+    });
+}
+
 let getTokenDataByAccessToken = (accessToken) => {
     return new Promise((resolve, reject) => {
 
@@ -1547,9 +2178,6 @@ let getOAuth2ClientByAccessToken = (accessToken) => {
         const oAuth2Client = new google.auth.OAuth2(
             config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
-        // const oAuth2Client = new google.auth.OAuth2(
-        //     "535313902488-e6u9tb709cfdl824cl14hh4icag9ip32.apps.googleusercontent.com", "BxuRRx0Bok7LOgxhypOBMyTW", "urn:ietf:wg:oauth:2.0:oob");
-
 
         await getTokenDataByAccessToken(accessToken)
             .then(function (tokenResult) {
@@ -1557,20 +2185,79 @@ let getOAuth2ClientByAccessToken = (accessToken) => {
                 console.log("\n========= tokenResult =========");
                 console.log(tokenResult);
 
-                let tokenData = {
-                    access_token: tokenResult.access_token,
-                    expiry_date: tokenResult.expiry_date,
-                    refresh_token: tokenResult.refresh_token,
-                    scope: tokenResult.scope,
-                    token_type: tokenResult.token_type
-                };
-                oAuth2Client.setCredentials(tokenData);
-                resolve(oAuth2Client);
+                if (tokenResult !== null) {
+                    let tokenData = {
+                        access_token: tokenResult.access_token,
+                        expiry_date: tokenResult.expiry_date,
+                        refresh_token: tokenResult.refresh_token,
+                        scope: tokenResult.scope,
+                        token_type: tokenResult.token_type
+                    };
+                    oAuth2Client.setCredentials(tokenData);
+                    resolve(oAuth2Client);
+                }
+                else {
+                    console.log("Entered token is not available");
+                    jsonString = messageFormatter.FormatMessage(undefined, "Entered token is not available", false, undefined);
+                    reject(jsonString);
+                }
+
+
             })
             .catch(function (error) {
+                console.log("An exception occurred while getting OAuth client");
                 console.log(error);
-                reject(error);
-                return;
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while getting OAuth client", false, error);
+                reject(jsonString);
+            });
+    });
+}
+
+let getOAuth2ClientByConnectionID = (connectionID) => {
+    return new Promise(async (resolve, reject) => {
+
+        // fs.readFile(CREDENTIAL_FILE_PATH, async (err, content) => {
+        // if (err) return console.log('Error loading client secret file:', err);
+        // Authorize a client with credentials, then call the Google Sheets API.
+
+        // let credentials = JSON.parse(content);
+
+        // const { client_secret, client_id, redirect_uris } = credentials.installed;
+        // const oAuth2Client = new google.auth.OAuth2(
+        //     client_id, client_secret, redirect_uris[0]);
+
+        const oAuth2Client = new google.auth.OAuth2(
+            config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+
+
+        await getTokenDataByConnectionID(connectionID)
+            .then(function (tokenResult) {
+
+                console.log("\n========= tokenResult =========");
+                console.log(tokenResult);
+
+                if (tokenResult !== null) {
+                    let tokenData = {
+                        access_token: tokenResult.accessToken,
+                        expiry_date: tokenResult.expiryDate,
+                        refresh_token: tokenResult.refreshToken,
+                        scope: tokenResult.scope,
+                        token_type: tokenResult.tokenType
+                    };
+                    oAuth2Client.setCredentials(tokenData);
+                    resolve(oAuth2Client);
+                }
+                else {
+                    console.log("Entered connection ID is not available");
+                    jsonString = messageFormatter.FormatMessage(undefined, "Entered connection ID is not available", false, undefined);
+                    reject(jsonString);
+                }
+            })
+            .catch(function (error) {
+                console.log("An exception occurred while getting OAuth client");
+                console.log(error);
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while getting OAuth client", false, error);
+                reject(jsonString);
             });
         // });
     });
@@ -1613,58 +2300,5 @@ let getOAuth2Client = (company, tenant) => {
                 return;
             });
         // });
-    });
-}
-
-let GetForms = (token) => {
-    return new Promise((resolve, reject) => {
-        let uri = "https://api.typeform.com/forms";
-
-        uri = encodeURI(uri);
-
-        request({
-            method: "GET",
-            url: uri,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            }
-        }, function (_error, _response) {
-            console.log(_response.body);
-
-            if (_error) {
-                console.log("Error occurred while getting forms data: " + _error);
-                jsonString = messageFormatter.FormatMessage(_error, "Error occurred while getting forms data", false, undefined);
-                reject(jsonString);
-            }
-            resolve(_response.body);
-        });
-    });
-
-}
-
-let GetFormsByID = (token, formID) => {
-    return new Promise((resolve, reject) => {
-        let uri = "https://api.typeform.com/forms/" + formID;
-
-        uri = encodeURI(uri);
-
-        request({
-            method: "GET",
-            url: uri,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            }
-        }, function (_error, _response) {
-            console.log(_response.body);
-
-            if (_error) {
-                console.log("Error occurred while getting forms data: " + _error);
-                jsonString = messageFormatter.FormatMessage(_error, "Error occurred while getting forms data", false, undefined);
-                reject(jsonString);
-            }
-            resolve(_response.body);
-        });
     });
 }
