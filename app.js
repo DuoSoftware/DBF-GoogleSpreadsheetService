@@ -45,9 +45,9 @@ server.listen(3669, () => {
 //         version: '1'
 //     }));
 
-server.get('/DBF/API/GoogleSpreadsheetService/GetAuthURL', functions.GetAuthURL);
+// server.get('/DBF/API/GoogleSpreadsheetService/GetAuthURL', functions.GetAuthURL);
 server.get('/DBF/API/GoogleSpreadsheetService/Test', functions.Test);
-server.post('/DBF/API/GoogleSpreadsheetService/GetTokenByCode', functions.GetTokenByCode);
+// server.post('/DBF/API/GoogleSpreadsheetService/GetTokenByCode', functions.GetTokenByCode);
 server.post('/DBF/API/GoogleSpreadsheetService/GetData', functions.GetData);
 server.post('/DBF/API/GoogleSpreadsheetService/FilterData', functions.FilterData);
 server.post('/DBF/API/GoogleSpreadsheetService/GetDataByRange', functions.GetDataByRange);

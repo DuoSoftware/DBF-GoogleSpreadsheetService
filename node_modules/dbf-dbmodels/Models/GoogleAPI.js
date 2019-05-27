@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-var GoogleSheetsConnectionsScheme = new Schema({
+var ConnectionsGoogleSheetsScheme = new Schema({
     accessToken: { type: String, required: true },
     company: { type: String, required: true },
     connectionID: { type: String, required: true },
@@ -27,7 +27,7 @@ var GoogleSheetsConnectionsScheme = new Schema({
 //     token_type: { type: String, required: true }
 // });
 
-var GMailConnectionsScheme = new Schema({
+var ConnectionsGMailScheme = new Schema({
     accessToken: { type: String, required: true },
     company: { type: String, required: true },
     connectionID: { type: String, required: true },
@@ -41,10 +41,10 @@ var GMailConnectionsScheme = new Schema({
     userSub: { type: String, required: true }
 });
 
-GoogleSheetsConnectionsScheme.index({ "connectionID": 1}, { "unique": true });
-GMailConnectionsScheme.index({ "connectionID": 1}, { "unique": true });
+ConnectionsGoogleSheetsScheme.index({ "connectionID": 1}, { "unique": true });
+ConnectionsGMailScheme.index({ "connectionID": 1}, { "unique": true });
 // GoogleSheetsLogScheme.index({ "logID": 1 }, { "unique": true });
 
-module.exports.googlesheetsconnections = mongoose.model('googlesheetsconnections', GoogleSheetsConnectionsScheme);
-module.exports.gmailconnections = mongoose.model('gmailconnections', GMailConnectionsScheme);
+module.exports.connectionsgooglesheets = mongoose.model('connectionsgooglesheets', ConnectionsGoogleSheetsScheme);
+module.exports.connectionsgmail = mongoose.model('connectionsgmail', ConnectionsGMailScheme);
 // module.exports.googlesheetslog = mongoose.model('googlesheetslog', GoogleSheetsLogScheme);

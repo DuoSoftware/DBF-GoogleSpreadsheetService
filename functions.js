@@ -6,9 +6,9 @@ const mongoose = require("mongoose");
 const config = require('config');
 const async = require('async');
 const request = require('request');
-const googlesheetsconnections = require('dbf-dbmodels/Models/GoogleAPI').googlesheetsconnections;
+const connectionsgooglesheets = require('dbf-dbmodels/Models/GoogleAPI').connectionsgooglesheets;
 // const googlesheetslog = require('dbf-dbmodels/Models/GoogleAPI').googlesheetslog;
-const connections = require('dbf-dbmodels/Models/GoogleSheets').connections;
+// const connections = require('dbf-dbmodels/Models/GoogleSheets').connections;
 const uuidv1 = require('uuid/v1');
 const JSONC = require('circular-json');
 
@@ -18,7 +18,7 @@ const { google } = require('googleapis');
 var GoogleSpreadsheet = require('google-spreadsheet');
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'];
+// const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
@@ -27,100 +27,100 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.goo
 // const CREDENTIAL_FILE_PATH = './credentials.json';
 
 
-module.exports.GetAuthURL = async function (req, res, next) {
+// module.exports.GetAuthURL = async function (req, res, next) {
 
-    console.log("\n==================== GetAuthURL Internal method ====================\n");
+//     console.log("\n==================== GetAuthURL Internal method ====================\n");
 
-    // Load client secrets from a local file.
-    // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
-    // if (err) return console.log('Error loading client secret file:', err);
-    // Authorize a client with credentials, then call the Google Sheets API.
+//     // Load client secrets from a local file.
+//     // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
+//     // if (err) return console.log('Error loading client secret file:', err);
+//     // Authorize a client with credentials, then call the Google Sheets API.
 
-    // let credentials = JSON.parse(content);
+//     // let credentials = JSON.parse(content);
 
-    // const { client_secret, client_id, redirect_uris } = credentials.installed;
-    // const oAuth2Client = new google.auth.OAuth2(
-    //     client_id, client_secret, redirect_uris[0]);
+//     // const { client_secret, client_id, redirect_uris } = credentials.installed;
+//     // const oAuth2Client = new google.auth.OAuth2(
+//     //     client_id, client_secret, redirect_uris[0]);
 
-    const oAuth2Client = new google.auth.OAuth2(config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+//     const oAuth2Client = new google.auth.OAuth2(config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
-    const authUrl = oAuth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: SCOPES,
-    });
-    console.log('Authorize this app by visiting this url: ', authUrl);
+//     const authUrl = oAuth2Client.generateAuthUrl({
+//         access_type: 'offline',
+//         scope: SCOPES,
+//     });
+//     console.log('Authorize this app by visiting this url: ', authUrl);
 
-    jsonString = messageFormatter.FormatMessage(undefined, "URL successfully created", true, authUrl);
-    res.end(jsonString);
-    // });
-}
+//     jsonString = messageFormatter.FormatMessage(undefined, "URL successfully created", true, authUrl);
+//     res.end(jsonString);
+//     // });
+// }
 
-module.exports.GetTokenByCode = async function (req, res, next) {
+// module.exports.GetTokenByCode = async function (req, res, next) {
 
-    console.log("\n==================== GetTokenByCode Internal method ====================\n");
+//     console.log("\n==================== GetTokenByCode Internal method ====================\n");
 
-    console.log(req);
+//     console.log(req);
 
-    // var company = parseInt(req.user.company);
-    // var tenant = parseInt(req.user.tenant);
-    var company = "company";
-    var tenant = "tenant";
-    var userSub = "userSub";
+//     // var company = parseInt(req.user.company);
+//     // var tenant = parseInt(req.user.tenant);
+//     var company = "company";
+//     var tenant = "tenant";
+//     var userSub = "userSub";
 
-    // Load client secrets from a local file.
-    // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
-    // if (err) return console.log('Error loading client secret file:', err);
-    // Authorize a client with credentials, then call the Google Sheets API.
+//     // Load client secrets from a local file.
+//     // fs.readFile(CREDENTIAL_FILE_PATH, (err, content) => {
+//     // if (err) return console.log('Error loading client secret file:', err);
+//     // Authorize a client with credentials, then call the Google Sheets API.
 
-    // let credentials = JSON.parse(content);
+//     // let credentials = JSON.parse(content);
 
-    // const { client_secret, client_id, redirect_uris } = credentials.installed;
-    // const oAuth2Client = new google.auth.OAuth2(
-    //     client_id, client_secret, redirect_uris[0]);
+//     // const { client_secret, client_id, redirect_uris } = credentials.installed;
+//     // const oAuth2Client = new google.auth.OAuth2(
+//     //     client_id, client_secret, redirect_uris[0]);
 
-    const oAuth2Client = new google.auth.OAuth2(
-        config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
+//     const oAuth2Client = new google.auth.OAuth2(
+//         config.GoogleSheets.client_id, config.GoogleSheets.client_secret, config.GoogleSheets.redirect_uris);
 
 
-    oAuth2Client.getToken(req.body.code, async (err, token) => {
-        if (err) {
-            console.log('Error while trying to retrieve access token: ' + JSONC.stringify(err.response));
-            jsonString = messageFormatter.FormatMessage(err, "Get token from google sheets has failed", false, undefined);
-            res.end(jsonString);
-        }
-        else {
-            console.log("Token received: " + token);
-            oAuth2Client.setCredentials(token);
+//     oAuth2Client.getToken(req.body.code, async (err, token) => {
+//         if (err) {
+//             console.log('Error while trying to retrieve access token: ' + JSONC.stringify(err.response));
+//             jsonString = messageFormatter.FormatMessage(err, "Get token from google sheets has failed", false, undefined);
+//             res.end(jsonString);
+//         }
+//         else {
+//             console.log("Token received: " + token);
+//             oAuth2Client.setCredentials(token);
 
-            // Store the token to disk for later program executions
-            // fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-            //     if (err) return console.error(err);
-            //     console.log('Token stored to', TOKEN_PATH);
-            // });
-            // callback(oAuth2Client);
+//             // Store the token to disk for later program executions
+//             // fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+//             //     if (err) return console.error(err);
+//             //     console.log('Token stored to', TOKEN_PATH);
+//             // });
+//             // callback(oAuth2Client);
 
-            // saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type);
-            await saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type, userSub)
-                .then(async function (tokenResult) {
-                    console.log("Token data save successful: " + tokenResult);
+//             // saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type);
+//             await saveTokenData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type, userSub)
+//                 .then(async function (tokenResult) {
+//                     console.log("Token data save successful: " + tokenResult);
 
-                    await saveTokenLogData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type).catch(function (tokenError) {
-                        console.log(tokenError);
-                    });
+//                     await saveTokenLogData(company, token.expiry_date, token.refresh_token, token.scope, tenant, token.access_token, token.token_type).catch(function (tokenError) {
+//                         console.log(tokenError);
+//                     });
 
-                    res.end(tokenResult);
-                    return;
-                })
-                .catch(function (error) {
-                    console.log("Token data save has failed: " + error);
+//                     res.end(tokenResult);
+//                     return;
+//                 })
+//                 .catch(function (error) {
+//                     console.log("Token data save has failed: " + error);
 
-                    res.end(error);
-                    return;
-                });
-        }
-    });
-    // });
-}
+//                     res.end(error);
+//                     return;
+//                 });
+//         }
+//     });
+//     // });
+// }
 
 module.exports.Test = async function (req, res, next) {
 
@@ -177,9 +177,7 @@ module.exports.Test = async function (req, res, next) {
     // fs.readFile(TOKEN_PATH, (err, token) => {
     //     // if (err) return getNewToken(oAuth2Client, callback);
 
-    //     // console.log(JSON.parse(token)); 
-    //     // Object {access_token: "ya29.Glv7BmEUgy7ZFXGEjpYBKI6xc5O5ZIZu2DDTeB5TEpX-9…", refresh_token: "1/yGbcTSI6B2rDGaWVVWG3MsjEomUCCBew3e5XFEuKie8", scope: "https://www.googleapis.com/auth/spreadsheets.reado…", token_type: "Bearer", expiry_date: 1556620505539}
-
+    
 
     //     oAuth2Client.setCredentials(JSON.parse(token));
     //     listMajors(oAuth2Client);
@@ -2005,111 +2003,111 @@ function listMajors(auth2) {
     });
 }
 
-let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type, userSub) => {
-    return new Promise((resolve, reject) => {
-        let tokenData = {
-            access_token: access_token,
-            company: company,
-            expiry_date: expiry_date,
-            refresh_token: refresh_token,
-            scope: scope,
-            tenant: tenant,
-            token_type: token_type,
-            userSub: userSub
-        };
+// let saveTokenData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type, userSub) => {
+//     return new Promise((resolve, reject) => {
+//         let tokenData = {
+//             access_token: access_token,
+//             company: company,
+//             expiry_date: expiry_date,
+//             refresh_token: refresh_token,
+//             scope: scope,
+//             tenant: tenant,
+//             token_type: token_type,
+//             userSub: userSub
+//         };
 
-        googlesheets.findOneAndUpdate({
-            'company': company,
-            'tenant': tenant
-        }, tokenData, {
-                upsert: true
-            }, function (err, _tokenDataResult) {
-                if (err) {
-                    console.log("Error occurred while saving token data: " + err);
-                    jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token data", false, undefined);
-                    reject(jsonString);
-                } else {
-                    console.log("Successfully retrieved and saved token data");
-                    jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved and saved token data", true, undefined);
-                    resolve(jsonString);
-                }
-            });
+//         connectionsgooglesheets.findOneAndUpdate({
+//             'company': company,
+//             'tenant': tenant
+//         }, tokenData, {
+//                 upsert: true
+//             }, function (err, _tokenDataResult) {
+//                 if (err) {
+//                     console.log("Error occurred while saving token data: " + err);
+//                     jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token data", false, undefined);
+//                     reject(jsonString);
+//                 } else {
+//                     console.log("Successfully retrieved and saved token data");
+//                     jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved and saved token data", true, undefined);
+//                     resolve(jsonString);
+//                 }
+//             });
 
-        // NEW WAY
+//         // NEW WAY
 
-        // company: {type: Number, required: true},
-        // connectionID: {type: String, required: true},
-        // connectionType: {type: String, required: true},
-        // created_at: {type:Date,default: Date.now},
-        // description: {type: String},
-        // enable: {type: Boolean, required: true},
-        // image: {type: String},
-        // integrationConnections: {type: Array},
-        // integrationData: {type: Array},
-        // integrationName: {type: String, required: true},
-        // state: {type: String, required: true},
-        // tenant: {type: Number, required: true},
-        // updated_at: {type:Date,default: Date.now},
-        // userSub: {type: String, required: true},
+//         // company: {type: Number, required: true},
+//         // connectionID: {type: String, required: true},
+//         // connectionType: {type: String, required: true},
+//         // created_at: {type:Date,default: Date.now},
+//         // description: {type: String},
+//         // enable: {type: Boolean, required: true},
+//         // image: {type: String},
+//         // integrationConnections: {type: Array},
+//         // integrationData: {type: Array},
+//         // integrationName: {type: String, required: true},
+//         // state: {type: String, required: true},
+//         // tenant: {type: Number, required: true},
+//         // updated_at: {type:Date,default: Date.now},
+//         // userSub: {type: String, required: true},
 
 
-        // connections.findOneAndUpdate({
-        //     'connectionID': connectionID
-        // }, tokenData, {
-        //         upsert: true
-        //     }, function (err, _tokenDataResult) {
-        //         if (err) {
-        //             console.log("Error occurred while saving token data: " + err);
-        //             jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token data", false, undefined);
-        //             reject(jsonString);
-        //         } else {
-        //             console.log("Successfully retrieved and saved token data");
-        //             jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved and saved token data", true, undefined);
-        //             resolve(jsonString);
-        //         }
-        //     });
-    });
-}
+//         // connections.findOneAndUpdate({
+//         //     'connectionID': connectionID
+//         // }, tokenData, {
+//         //         upsert: true
+//         //     }, function (err, _tokenDataResult) {
+//         //         if (err) {
+//         //             console.log("Error occurred while saving token data: " + err);
+//         //             jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token data", false, undefined);
+//         //             reject(jsonString);
+//         //         } else {
+//         //             console.log("Successfully retrieved and saved token data");
+//         //             jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved and saved token data", true, undefined);
+//         //             resolve(jsonString);
+//         //         }
+//         //     });
+//     });
+// }
 
-let saveTokenLogData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type) => {
-    return new Promise((resolve, reject) => {
+// let saveTokenLogData = (company, expiry_date, refresh_token, scope, tenant, access_token, token_type) => {
+//     return new Promise((resolve, reject) => {
 
-        let logID = uuidv1();
+//         let logID = uuidv1();
 
-        let tokenLogData = {
-            access_token: access_token,
-            company: company,
-            expiry_date: expiry_date,
-            logID: logID,
-            refresh_token: refresh_token,
-            scope: scope,
-            tenant: tenant,
-            token_type: token_type
-        };
+//         let tokenLogData = {
+//             access_token: access_token,
+//             company: company,
+//             expiry_date: expiry_date,
+//             logID: logID,
+//             refresh_token: refresh_token,
+//             scope: scope,
+//             tenant: tenant,
+//             token_type: token_type
+//         };
 
-        googlesheetslog.findOneAndUpdate({
-            'logID': logID
-        }, tokenLogData, {
-                upsert: true
-            }, function (err, _tokenLogDataResult) {
-                if (err) {
-                    console.log("Error occurred while saving token log data: " + err);
-                    jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token log data", false, undefined);
-                    reject(jsonString);
-                }
-                console.log("Successfully saved token log data");
-                jsonString = messageFormatter.FormatMessage(undefined, "Successfully saved token log data", true, undefined);
-                resolve(jsonString);
-            });
-    });
-}
+//         googlesheetslog.findOneAndUpdate({
+//             'logID': logID
+//         }, tokenLogData, {
+//                 upsert: true
+//             }, function (err, _tokenLogDataResult) {
+//                 if (err) {
+//                     console.log("Error occurred while saving token log data: " + err);
+//                     jsonString = messageFormatter.FormatMessage(err, "Error occurred while saving token log data", false, undefined);
+//                     reject(jsonString);
+//                 }
+//                 console.log("Successfully saved token log data");
+//                 jsonString = messageFormatter.FormatMessage(undefined, "Successfully saved token log data", true, undefined);
+//                 resolve(jsonString);
+//             });
+//     });
+// }
 
 let getTokenDataByCompanyTenant = (company, tenant) => {
     return new Promise((resolve, reject) => {
 
         // getTokenData("1", "51");
 
-        googlesheets.findOne({
+        connectionsgooglesheets.findOne({
             'company': company,
             'tenant': tenant
         }, function (err, _tokenResult) {
@@ -2129,7 +2127,7 @@ let getTokenDataByConnectionID = (connectionID) => {
 
         // getTokenData("1", "51");
 
-        googlesheetsconnections.findOne({
+        connectionsgooglesheets.findOne({
             'connectionID': connectionID
         }, function (err, _tokenResult) {
             // console.log(_recordResult);
@@ -2148,7 +2146,7 @@ let getTokenDataByAccessToken = (accessToken) => {
 
         // getTokenData("1", "51");
 
-        googlesheets.findOne({
+        connectionsgooglesheets.findOne({
             'access_token': accessToken
         }, function (err, _tokenResult) {
             console.log(_tokenResult);
