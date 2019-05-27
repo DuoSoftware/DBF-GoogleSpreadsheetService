@@ -30,7 +30,7 @@ process.on('uncaughtException', function (err) {
     console.log("Node NOT Exiting...");
 });
 
-server.listen(3369, () => {
+server.listen(3669, () => {
     console.log('%s listening at %s', server.name, server.url);
 });
 
