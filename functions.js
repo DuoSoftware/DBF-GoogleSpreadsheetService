@@ -177,7 +177,7 @@ module.exports.Test = async function (req, res, next) {
     // fs.readFile(TOKEN_PATH, (err, token) => {
     //     // if (err) return getNewToken(oAuth2Client, callback);
 
-    
+
 
     //     oAuth2Client.setCredentials(JSON.parse(token));
     //     listMajors(oAuth2Client);
@@ -1306,14 +1306,14 @@ module.exports.GetSpreadsheetListByToken = async function (req, res) {
         body = req.body;
     }
 
-    // if (body.accessToken !== undefined && body.accessToken !== '') {
-    //     accessToken = body.accessToken;
-    // } else {
-    //     console.log("ISSUE: AccessToken not entered!");
-    //     fieldValidationDone = false;
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-    //     res.end(jsonString);
-    // }
+    if (body.accessToken !== undefined && body.accessToken !== '') {
+        accessToken = body.accessToken;
+    } else {
+        console.log("ISSUE: AccessToken not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
+        res.end(jsonString);
+    }
 
     if (fieldValidationDone !== false) {
 
@@ -1361,6 +1361,78 @@ module.exports.GetSpreadsheetListByToken = async function (req, res) {
             })
     }
 }
+
+module.exports.GetSpreadsheetListByConnectionID = async function (req, res) {
+
+    console.log("\n==================== GetSpreadsheetListByConnectionID Internal method ====================\n");
+
+    let body;
+    let connectionID = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        await getOAuth2ClientByConnectionID(connectionID)
+            .then(function (auth) {
+                // Do NOT rename "auth" field to anyother name, it will stop working
+                const drive = google.drive({ version: 'v3', auth });
+
+                drive.files.list({
+                    q: "mimeType='application/vnd.google-apps.spreadsheet'",
+                    fields: 'nextPageToken, files(id, name)'
+                }, (err, response) => {
+                    if (err) {
+                        console.log("Error occurred while getting spreadsheet list by connectionID: " + err);
+                        jsonString = messageFormatter.FormatMessage(undefined, "Error occurred while getting spreadsheet list by connectionID", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        console.log("Successfully retrieved spreadsheet list");
+                        if (response.data !== undefined) {
+                            if (response.data.files !== undefined) {
+                                // console.log(response.data.files);
+                                jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved spreadsheet list", true, response.data.files);
+                                res.end(jsonString);
+                            }
+                            else {
+                                console.log("No files retrieved");
+                                jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved spreadsheet list", true, []);
+                                res.end(jsonString);
+                            }
+                        }
+                        else {
+                            console.log("No data retrieved");
+                            jsonString = messageFormatter.FormatMessage(undefined, "Successfully retrieved spreadsheet list", true, []);
+                            res.end(jsonString);
+                        }
+                    }
+                });
+
+            })
+            .catch(function (error) {
+                console.log("An exception occurred while getting spreadsheet list by connectionID");
+                console.log(error);
+                jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while getting spreadsheet list by connectionID", false, error);
+                reject(jsonString);
+            })
+    }
+}
+
 
 module.exports.GetSheetsListBySpreadsheetID = async function (req, res) {
 

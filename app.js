@@ -61,6 +61,7 @@ server.post('/DBF/API/GoogleSpreadsheetService/ClearRows', functions.ClearRows);
 server.post('/DBF/API/GoogleSpreadsheetService/ClearValues', functions.ClearValues);
 server.post('/DBF/API/GoogleSpreadsheetService/GetSheetsListBySpreadsheetID', functions.GetSheetsListBySpreadsheetID);
 server.post('/DBF/API/GoogleSpreadsheetService/GetSpreadsheetListByToken', functions.GetSpreadsheetListByToken);
+server.post('/DBF/API/GoogleSpreadsheetService/GetSpreadsheetListByConnectionID', functions.GetSpreadsheetListByConnectionID);
 
 
 
