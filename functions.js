@@ -261,7 +261,7 @@ module.exports.CreateSpreadSheet = async function (req, res) {
                 console.log("An exception occurred while creating spreadsheet");
                 console.log(error);
                 jsonString = messageFormatter.FormatMessage(undefined, "An exception occurred while creating spreadsheet", false, error);
-                reject(jsonString);
+                res.end(jsonString);
             })
     }
 }
@@ -1668,9 +1668,12 @@ module.exports.FilterData = async function (req, res) {
     let connectionID = "";
     let spreadsheetID = "";
     let sheetID = "";
+    let sheetName = "";
+    let searchValue = "";
     let startingRowIndex = ""; //Row number = row index + 1
     let endingRowIndex = ""; //Row number = row index + 1
     let deleteByRowIndexOrRowNumber = "index";  // "index" OR "number"
+    let column = "";
     let fieldValidationDone = true;
 
     if (typeof req.body === 'string') {
@@ -1680,57 +1683,57 @@ module.exports.FilterData = async function (req, res) {
         body = req.body;
     }
 
-    // if (body.accessToken !== undefined && body.accessToken !== '') {
-    //     accessToken = body.accessToken;
-    // } else {
-    //     console.log("ISSUE: AccessToken not entered!");
-    //     fieldValidationDone = false;
-    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the access token details", false, undefined);
-    //     res.end(jsonString);
-    // }
+    if (body.column !== undefined && body.column !== '') {
+        column = body.column;
+    } else {
+        console.log("ISSUE: Column not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the column details", false, undefined);
+        res.end(jsonString);
+    }
 
 
     //////////// getting deleting row index //////////////////////
-    if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
-        deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
-    } else {
-        console.log("ISSUE: DeleteByRowIndexOrRowNumber not entered!");
-    }
+    // if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
+    //     deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
+    // } else {
+    //     console.log("ISSUE: DeleteByRowIndexOrRowNumber not entered!");
+    // }
 
-    if (deleteByRowIndexOrRowNumber === "number") {
-        if (body.startingRowNumber !== undefined && body.startingRowNumber !== '') {
-            startingRowIndex = parseInt(body.startingRowNumber) - 1;
-        } else {
-            console.log("ISSUE: StartingRowNumber not entered!");
-            fieldValidationDone = false;
-            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row number details", false, undefined);
-            res.end(jsonString);
-        }
+    // if (deleteByRowIndexOrRowNumber === "number") {
+    //     if (body.startingRowNumber !== undefined && body.startingRowNumber !== '') {
+    //         startingRowIndex = parseInt(body.startingRowNumber) - 1;
+    //     } else {
+    //         console.log("ISSUE: StartingRowNumber not entered!");
+    //         fieldValidationDone = false;
+    //         jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row number details", false, undefined);
+    //         res.end(jsonString);
+    //     }
 
-        if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
-            endingRowIndex = parseInt(body.endingRowNumber) - 1;
-        } else {
-            console.log("ISSUE: EndingRowNumber not entered!");
-            endingRowIndex = parseInt(startingRowIndex) + 1;
-        }
-    }
-    else {
-        if (body.startingRowIndex !== undefined && body.startingRowIndex !== '') {
-            startingRowIndex = parseInt(body.startingRowIndex);
-        } else {
-            console.log("ISSUE: StartingRowIndex not entered!");
-            fieldValidationDone = false;
-            jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row index details", false, undefined);
-            res.end(jsonString);
-        }
+    //     if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
+    //         endingRowIndex = parseInt(body.endingRowNumber) - 1;
+    //     } else {
+    //         console.log("ISSUE: EndingRowNumber not entered!");
+    //         endingRowIndex = parseInt(startingRowIndex) + 1;
+    //     }
+    // }
+    // else {
+    //     if (body.startingRowIndex !== undefined && body.startingRowIndex !== '') {
+    //         startingRowIndex = parseInt(body.startingRowIndex);
+    //     } else {
+    //         console.log("ISSUE: StartingRowIndex not entered!");
+    //         fieldValidationDone = false;
+    //         jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row index details", false, undefined);
+    //         res.end(jsonString);
+    //     }
 
-        if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
-            endingRowIndex = parseInt(body.endingRowIndex);
-        } else {
-            console.log("ISSUE: EndingRowIndex not entered!");
-            endingRowIndex = parseInt(startingRowIndex) + 1;
-        }
-    }
+    //     if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
+    //         endingRowIndex = parseInt(body.endingRowIndex);
+    //     } else {
+    //         console.log("ISSUE: EndingRowIndex not entered!");
+    //         endingRowIndex = parseInt(startingRowIndex) + 1;
+    //     }
+    // }
     //////////// end getting deleting row index //////////////////////
 
 
@@ -1743,13 +1746,21 @@ module.exports.FilterData = async function (req, res) {
         res.end(jsonString);
     }
 
-
-    if (body.sheetID !== undefined && body.sheetID !== '') {
-        sheetID = body.sheetID;
+    if (body.searchValue !== undefined && body.searchValue !== '') {
+        searchValue = body.searchValue;
     } else {
-        console.log("ISSUE: SheetID not entered!");
+        console.log("ISSUE: SearchValue not entered!");
         fieldValidationDone = false;
-        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet ID details", false, undefined);
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the search value details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
         res.end(jsonString);
     }
 
@@ -1796,20 +1807,20 @@ module.exports.FilterData = async function (req, res) {
                 //     }
                 // };
 
-                let filterSettings = {
-                    "range":
-                    {
-                        "sheetId": sheetID
-                    },
-                    "condition": {
-                        "type": "TEXT_CONTAINS",
-                        "values": [
-                            {
-                                "userEnteredValue": "Anna"
-                            }
-                        ]
-                    }
-                }
+                // let filterSettings = {
+                //     "range":
+                //     {
+                //         "sheetId": sheetID
+                //     },
+                //     "condition": {
+                //         "type": "TEXT_CONTAINS",
+                //         "values": [
+                //             {
+                //                 "userEnteredValue": "Anna"
+                //             }
+                //         ]
+                //     }
+                // }
                 // var request = {
                 //     // The spreadsheet to request.
                 //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
@@ -1837,56 +1848,169 @@ module.exports.FilterData = async function (req, res) {
                 // auth: authClient,
                 // };
 
-                var request = {
-                    // The spreadsheet to apply the updates to.
-                    spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
-                    // "includeGridData": true,
-                    resource: {
-                        // A list of updates to apply to the spreadsheet.
-                        // Requests will be applied in the order they are specified.
-                        // If any request is not valid, no requests will be applied.
-                        requests: [{
-                            "setBasicFilter": {
+                // var request = {
+                //     // The spreadsheet to apply the updates to.
+                //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                //     // "includeGridData": true,
+                //     resource: {
+                //         // A list of updates to apply to the spreadsheet.
+                //         // Requests will be applied in the order they are specified.
+                //         // If any request is not valid, no requests will be applied.
+                //         requests: [{
+                //             "setBasicFilter": {
 
-                                "filter": {
-                                    "criteria": {
-                                        0: {
-                                            "condition": {
-                                                "type": "TEXT_CONTAINS",
-                                                "values": [
-                                                    {
-                                                        "userEnteredValue": "name"
-                                                    }
-                                                ]
-                                            }
-                                        }
+                //                 "filter": {
+                //                     "criteria": {
+                //                         0: {
+                //                             "condition": {
+                //                                 "type": "TEXT_CONTAINS",
+                //                                 "values": [
+                //                                     {
+                //                                         "userEnteredValue": "name"
+                //                                     }
+                //                                 ]
+                //                             }
+                //                         }
+                //                     }
+
+                //                 },
+                //             }
+                //         }
+                //         ],  // TODO: Update placeholder value.
+
+                //         // TODO: Add desired properties to the request body.
+                //     }
+                // };
+
+                // var request = {
+                //     // The spreadsheet to apply the updates to.
+                //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                //     // "includeGridData": true,
+                //     resource: {
+                //         // A list of updates to apply to the spreadsheet.
+                //         // Requests will be applied in the order they are specified.
+                //         // If any request is not valid, no requests will be applied.
+                //         requests: [{
+                //             "setBasicFilter": {
+
+                //                 "filter": {
+                //                     "criteria": {
+                //                         0: {
+                //                             "condition": {
+                //                                 "type": "TEXT_CONTAINS",
+                //                                 "values": [
+                //                                     {
+                //                                         "userEnteredValue": "name"
+                //                                     }
+                //                                 ]
+                //                             }
+                //                         }
+                //                     }
+
+                //                 },
+                //             }
+                //         }
+                //         ],  // TODO: Update placeholder value.
+
+                //         // TODO: Add desired properties to the request body.
+                //     }
+                // };
+
+                const request = {
+                    // The ID of the spreadsheet
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+                        "requests": [
+                            {
+                                "addSheet": {
+                                    "properties": {
+                                        "hidden": false,
+                                        "title": "SheetX2"
                                     }
-
-                                },
+                                }
                             }
-                        }
-                        ],  // TODO: Update placeholder value.
-
-                        // TODO: Add desired properties to the request body.
+                        ]
                     }
-                };
+                }
+
+
+
 
                 sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                    if (err) {
+                        console.log(err);
+                        // jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                        // res.end(jsonString);
+                    } else {
+                        console.log(response);
+                        // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                        // jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                        // res.end(jsonString);
+                    }
+                });
+                ///////////////////////////////
+
+
+                const request2 = {
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+                        "valueInputOption": "USER_ENTERED",
+                        "data": [
+                            {
+                                "range": "SheetX2!A1",
+                                "values": [
+                                    [
+                                        '=MATCH("' + searchValue + '", ' + sheetName + '!' + column + ':' + column + ', 0)'
+                                    ]
+                                ]
+                            }
+                        ],
+                        "includeValuesInResponse": true,
+                        "responseValueRenderOption": "UNFORMATTED_VALUE"
+                    }
+                }
+
+                sheets.spreadsheets.values.batchUpdate(request2, (err, response) => {
                     if (err) {
                         console.log(err);
                         jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
                         res.end(jsonString);
                     } else {
-                        console.log(response);
+                        // console.log(response);
+                        console.log(response.data.responses[0].updatedData.values[0][0]);
                         // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
-                        jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
-                        res.end(jsonString);
+
+                        let indexValue = response.data.responses[0].updatedData.values[0][0];
+
+                        sheets.spreadsheets.values.get({
+                            spreadsheetId: spreadsheetID,
+                            range: sheetName + "!A" + indexValue + ":S" + indexValue,
+                            majorDimension: "ROWS",
+                            auth: auth
+                        }, function (err, result) {
+                            if (err) {
+                                console.log("The API returned an error: " + err);
+                                jsonString = messageFormatter.FormatMessage(undefined, "The API returned an error: " + err, false, undefined);
+                                res.end(jsonString);
+                            }
+                            else {
+                                console.log(result.data);
+
+                                let sheetValues = [];
+
+                                if (result.data.values !== undefined && result.data.values !== '') {
+                                    sheetValues = result.data.values;
+                                }
+
+                                jsonString = messageFormatter.FormatMessage(undefined, "Values retrieved successfully", true, sheetValues);
+                                res.end(jsonString);
+                            }
+                        });
+
+                        // jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                        // res.end(jsonString);
                     }
                 });
-                /////////////////////////////////
-
-
-
 
 
                 // const request = {
@@ -1928,6 +2052,405 @@ module.exports.FilterData = async function (req, res) {
             })
     }
 }
+
+module.exports.FilterDataAdvanced = async function (req, res) {
+
+    console.log("\n==================== FilterDataAdvanced Internal method ====================\n");
+
+    // console.log("===== request body ======");
+    // console.log(req.body);
+
+    let body;
+    let accessToken = "";
+    let connectionID = "";
+    let spreadsheetID = "";
+    let sheetID = "";
+    let sheetName = "";
+    let searchValue = "";
+    let startingRowIndex = ""; //Row number = row index + 1
+    let endingRowIndex = ""; //Row number = row index + 1
+    let deleteByRowIndexOrRowNumber = "index";  // "index" OR "number"
+    let column = "";
+    let query = "";
+    let fieldValidationDone = true;
+
+    if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+    }
+    else {
+        body = req.body;
+    }
+
+    if (body.query !== undefined && body.query !== '') {
+        query = body.query;
+    } else {
+        console.log("ISSUE: Query not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the query details", false, undefined);
+        res.end(jsonString);
+    }
+
+
+    //////////// getting deleting row index //////////////////////
+    // if (body.deleteByRowIndexOrRowNumber !== undefined && body.deleteByRowIndexOrRowNumber !== '') {
+    //     deleteByRowIndexOrRowNumber = body.deleteByRowIndexOrRowNumber;
+    // } else {
+    //     console.log("ISSUE: DeleteByRowIndexOrRowNumber not entered!");
+    // }
+
+    // if (deleteByRowIndexOrRowNumber === "number") {
+    //     if (body.startingRowNumber !== undefined && body.startingRowNumber !== '') {
+    //         startingRowIndex = parseInt(body.startingRowNumber) - 1;
+    //     } else {
+    //         console.log("ISSUE: StartingRowNumber not entered!");
+    //         fieldValidationDone = false;
+    //         jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row number details", false, undefined);
+    //         res.end(jsonString);
+    //     }
+
+    //     if (body.endingRowNumber !== undefined && body.endingRowNumber !== '') {
+    //         endingRowIndex = parseInt(body.endingRowNumber) - 1;
+    //     } else {
+    //         console.log("ISSUE: EndingRowNumber not entered!");
+    //         endingRowIndex = parseInt(startingRowIndex) + 1;
+    //     }
+    // }
+    // else {
+    //     if (body.startingRowIndex !== undefined && body.startingRowIndex !== '') {
+    //         startingRowIndex = parseInt(body.startingRowIndex);
+    //     } else {
+    //         console.log("ISSUE: StartingRowIndex not entered!");
+    //         fieldValidationDone = false;
+    //         jsonString = messageFormatter.FormatMessage(undefined, "Please enter the starting row index details", false, undefined);
+    //         res.end(jsonString);
+    //     }
+
+    //     if (body.endingRowIndex !== undefined && body.endingRowIndex !== '') {
+    //         endingRowIndex = parseInt(body.endingRowIndex);
+    //     } else {
+    //         console.log("ISSUE: EndingRowIndex not entered!");
+    //         endingRowIndex = parseInt(startingRowIndex) + 1;
+    //     }
+    // }
+    //////////// end getting deleting row index //////////////////////
+
+
+    if (body.spreadsheetID !== undefined && body.spreadsheetID !== '') {
+        spreadsheetID = body.spreadsheetID;
+    } else {
+        console.log("ISSUE: SpreadsheetID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the spreadsheet ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    // if (body.searchValue !== undefined && body.searchValue !== '') {
+    //     searchValue = body.searchValue;
+    // } else {
+    //     console.log("ISSUE: SearchValue not entered!");
+    //     fieldValidationDone = false;
+    //     jsonString = messageFormatter.FormatMessage(undefined, "Please enter the search value details", false, undefined);
+    //     res.end(jsonString);
+    // }
+
+    if (body.sheetName !== undefined && body.sheetName !== '') {
+        sheetName = body.sheetName;
+    } else {
+        console.log("ISSUE: SheetName not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the sheet name details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (body.connectionID !== undefined && body.connectionID !== '') {
+        connectionID = body.connectionID;
+    } else {
+        console.log("ISSUE: ConnectionID not entered!");
+        fieldValidationDone = false;
+        jsonString = messageFormatter.FormatMessage(undefined, "Please enter the connection ID details", false, undefined);
+        res.end(jsonString);
+    }
+
+    if (fieldValidationDone !== false) {
+
+        // await getOAuth2ClientByAccessToken(accessToken)
+        await getOAuth2ClientByConnectionID(connectionID)
+            .then(function (auth) {
+
+                const sheets = google.sheets({ version: 'v4', auth });
+
+                /////////////////////////////////
+                // // var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+                // var filterSettings = {};
+
+                // // The range of data on which you want to apply the filter.
+                // // optional arguments: startRowIndex, startColumnIndex, endRowIndex, endColumnIndex
+                // filterSettings.range = {
+                //     sheetId: sheetID
+                // };
+
+                // // Criteria for showing/hiding rows in a filter
+                // // https://developers.google.com/sheets/api/reference/rest/v4/FilterCriteria
+                // filterSettings.criteria = {};
+                // var columnIndex = 2;
+                // filterSettings['criteria'][columnIndex] = {
+                //     // 'hiddenValues': ["England", "France"]
+                //     'showValues': ["England", "France"]
+                // };
+
+                // var request = {
+                //     "setBasicFilter": {
+                //         "filter": filterSettings
+                //     }
+                // };
+
+                // let filterSettings = {
+                //     "range":
+                //     {
+                //         "sheetId": sheetID
+                //     },
+                //     "condition": {
+                //         "type": "TEXT_CONTAINS",
+                //         "values": [
+                //             {
+                //                 "userEnteredValue": "Anna"
+                //             }
+                //         ]
+                //     }
+                // }
+                // var request = {
+                //     // The spreadsheet to request.
+                //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                //     resource: {
+
+                //         "setBasicFilter": {
+                //             "filter": filterSettings
+                //         }
+                //     },
+
+                //     // "setBasicFilter": {
+                //     //     "filter": filterSettings
+                //     // }
+
+
+                // };
+
+                // var request = {
+                //     spreadsheetId: spreadsheetID,
+                //     "setBasicFilter": {
+                //         "filter": filterSettings
+                //     }
+                // };
+
+                // auth: authClient,
+                // };
+
+                // var request = {
+                //     // The spreadsheet to apply the updates to.
+                //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                //     // "includeGridData": true,
+                //     resource: {
+                //         // A list of updates to apply to the spreadsheet.
+                //         // Requests will be applied in the order they are specified.
+                //         // If any request is not valid, no requests will be applied.
+                //         requests: [{
+                //             "setBasicFilter": {
+
+                //                 "filter": {
+                //                     "criteria": {
+                //                         0: {
+                //                             "condition": {
+                //                                 "type": "TEXT_CONTAINS",
+                //                                 "values": [
+                //                                     {
+                //                                         "userEnteredValue": "name"
+                //                                     }
+                //                                 ]
+                //                             }
+                //                         }
+                //                     }
+
+                //                 },
+                //             }
+                //         }
+                //         ],  // TODO: Update placeholder value.
+
+                //         // TODO: Add desired properties to the request body.
+                //     }
+                // };
+
+                // var request = {
+                //     // The spreadsheet to apply the updates to.
+                //     spreadsheetId: spreadsheetID,  // TODO: Update placeholder value.
+                //     // "includeGridData": true,
+                //     resource: {
+                //         // A list of updates to apply to the spreadsheet.
+                //         // Requests will be applied in the order they are specified.
+                //         // If any request is not valid, no requests will be applied.
+                //         requests: [{
+                //             "setBasicFilter": {
+
+                //                 "filter": {
+                //                     "criteria": {
+                //                         0: {
+                //                             "condition": {
+                //                                 "type": "TEXT_CONTAINS",
+                //                                 "values": [
+                //                                     {
+                //                                         "userEnteredValue": "name"
+                //                                     }
+                //                                 ]
+                //                             }
+                //                         }
+                //                     }
+
+                //                 },
+                //             }
+                //         }
+                //         ],  // TODO: Update placeholder value.
+
+                //         // TODO: Add desired properties to the request body.
+                //     }
+                // };
+
+                const request = {
+                    // The ID of the spreadsheet
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+                        "requests": [
+                            {
+                                "addSheet": {
+                                    "properties": {
+                                        "hidden": false,
+                                        "title": "SheetX2"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+
+                // query
+                var array = query.split("=");
+
+                sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                    if (err) {
+                        console.log(err);
+                        // jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                        // res.end(jsonString);
+                    } else {
+                        console.log(response);
+                        // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                        // jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                        // res.end(jsonString);
+                    }
+                });
+                ///////////////////////////////
+
+
+                const request2 = {
+                    "spreadsheetId": spreadsheetID,
+                    "resource": {
+                        "valueInputOption": "USER_ENTERED",
+                        "data": [
+                            {
+                                "range": "SheetX2!A1",
+                                "values": [
+                                    [
+                                        '=MATCH("' + array[1] + '", ' + sheetName + '!' + array[0] + ':' + array[0] + ', 0)'
+                                    ]
+                                ]
+                            }
+                        ],
+                        "includeValuesInResponse": true,
+                        "responseValueRenderOption": "UNFORMATTED_VALUE"
+                    }
+                }
+
+                sheets.spreadsheets.values.batchUpdate(request2, (err, response) => {
+                    if (err) {
+                        console.log(err);
+                        jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                        res.end(jsonString);
+                    } else {
+                        // console.log(response);
+                        console.log(response.data.responses[0].updatedData.values[0][0]);
+                        // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+
+                        let indexValue = response.data.responses[0].updatedData.values[0][0];
+
+                        sheets.spreadsheets.values.get({
+                            spreadsheetId: spreadsheetID,
+                            range: sheetName + "!A" + indexValue + ":S" + indexValue,
+                            majorDimension: "ROWS",
+                            auth: auth
+                        }, function (err, result) {
+                            if (err) {
+                                console.log("The API returned an error: " + err);
+                                jsonString = messageFormatter.FormatMessage(undefined, "The API returned an error: " + err, false, undefined);
+                                res.end(jsonString);
+                            }
+                            else {
+                                console.log(result.data);
+
+                                let sheetValues = [];
+
+                                if (result.data.values !== undefined && result.data.values !== '') {
+                                    sheetValues = result.data.values;
+                                }
+
+                                jsonString = messageFormatter.FormatMessage(undefined, "Values retrieved successfully", true, sheetValues);
+                                res.end(jsonString);
+                            }
+                        });
+
+                        // jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                        // res.end(jsonString);
+                    }
+                });
+
+
+                // const request = {
+                //     // The ID of the spreadsheet
+                //     "spreadsheetId": spreadsheetID,
+                //     "resource": {
+                //         "requests": [
+                //             {
+                //                 "deleteDimension": {
+                //                     "range": {
+                //                         "sheetId": sheetID,
+                //                         "dimension": "ROWS",
+                //                         "startIndex": startingRowIndex,
+                //                         "endIndex": endingRowIndex
+                //                     }
+                //                 }
+                //             }
+                //         ]
+                //     }
+                // }
+                // sheets.spreadsheets.batchUpdate(request, (err, response) => {
+                //     if (err) {
+                //         // Handle error.
+                //         console.log(err);
+                //         jsonString = messageFormatter.FormatMessage(err, "Row deletion has failed", false, undefined);
+                //         res.end(jsonString);
+                //     } else {
+                //         console.log(response);
+                //         // console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+                //         jsonString = messageFormatter.FormatMessage(undefined, "Rows successfully deleted", true, undefined);
+                //         res.end(jsonString);
+                //     }
+                // });
+            })
+            .catch(function (error) {
+                console.log(error);
+                res.end(error);
+                return;
+            })
+    }
+}
+
 
 
 module.exports.GetDataByRange = async function (req, res) {
@@ -2053,6 +2576,53 @@ module.exports.GetDataByRange = async function (req, res) {
             })
     }
 }
+
+let getDataByColumn = (spreadsheetID, sheetName, columnIndex, sheets) => {
+
+    console.log("\n==================== getEmailByEmailID function ====================\n");
+
+    return new Promise((resolve, reject) => {
+
+        try {
+            // let cellRange = sheetName + '!' + startingCell + ':' + endingCell;
+
+            //     if (endingCell == "") {
+            //         cellRange = sheetName + '!' + startingCell;
+            //     }
+
+            let cellRange;
+            sheets.spreadsheets.values.get({
+                spreadsheetId: spreadsheetID,
+                range: cellRange,
+                majorDimension: "ROWS",
+                auth: auth
+            }, function (err, result) {
+                if (err) {
+                    console.log("The API returned an error: " + err);
+                    jsonString = messageFormatter.FormatMessage(undefined, "The API returned an error: " + err, false, undefined);
+                    res.end(jsonString);
+                }
+                else {
+                    console.log(result.data);
+
+                    let sheetValues = [];
+
+                    if (result.data.values !== undefined && result.data.values !== '') {
+                        sheetValues = result.data.values;
+                    }
+
+                    jsonString = messageFormatter.FormatMessage(undefined, "Values retrieved successfully", true, sheetValues);
+                    res.end(jsonString);
+                }
+            });
+        } catch (error) {
+            console.log("An exception occurred while getting the email by emailID: " + JSON.stringify(error));
+            jsonString = messageFormatter.FormatMessage(error, "An exception occurred while getting the email by emailID", false, undefined);
+            reject(jsonString);
+        }
+    });
+}
+
 
 function listMajors(auth2) {
     console.log(auth2);

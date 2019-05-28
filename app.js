@@ -48,20 +48,21 @@ server.listen(3669, () => {
 // server.get('/DBF/API/GoogleSpreadsheetService/GetAuthURL', functions.GetAuthURL);
 server.get('/DBF/API/GoogleSpreadsheetService/Test', functions.Test);
 // server.post('/DBF/API/GoogleSpreadsheetService/GetTokenByCode', functions.GetTokenByCode);
-server.post('/DBF/API/GoogleSpreadsheetService/GetData', functions.GetData);
-server.post('/DBF/API/GoogleSpreadsheetService/FilterData', functions.FilterData);
-server.post('/DBF/API/GoogleSpreadsheetService/GetDataByRange', functions.GetDataByRange);
-server.post('/DBF/API/GoogleSpreadsheetService/CreateSpreadSheet', functions.CreateSpreadSheet);
-server.post('/DBF/API/GoogleSpreadsheetService/CreateSheet', functions.CreateSheet);
-server.post('/DBF/API/GoogleSpreadsheetService/CopySheetToAnotherSpreadsheet', functions.CopySheetToAnotherSpreadsheet);
-server.post('/DBF/API/GoogleSpreadsheetService/UpdateValues', functions.UpdateValues);
-server.post('/DBF/API/GoogleSpreadsheetService/DeleteValues', functions.DeleteValues);
-server.post('/DBF/API/GoogleSpreadsheetService/DeleteRows', functions.DeleteRows);
 server.post('/DBF/API/GoogleSpreadsheetService/ClearRows', functions.ClearRows);
 server.post('/DBF/API/GoogleSpreadsheetService/ClearValues', functions.ClearValues);
+server.post('/DBF/API/GoogleSpreadsheetService/CopySheetToAnotherSpreadsheet', functions.CopySheetToAnotherSpreadsheet);
+server.post('/DBF/API/GoogleSpreadsheetService/CreateSheet', functions.CreateSheet);
+server.post('/DBF/API/GoogleSpreadsheetService/CreateSpreadSheet', functions.CreateSpreadSheet);
+server.post('/DBF/API/GoogleSpreadsheetService/DeleteRows', functions.DeleteRows);
+server.post('/DBF/API/GoogleSpreadsheetService/DeleteValues', functions.DeleteValues);
+server.post('/DBF/API/GoogleSpreadsheetService/FilterData', functions.FilterData);
+server.post('/DBF/API/GoogleSpreadsheetService/FilterDataAdvanced', functions.FilterDataAdvanced);
+server.post('/DBF/API/GoogleSpreadsheetService/GetData', functions.GetData);
+server.post('/DBF/API/GoogleSpreadsheetService/GetDataByRange', functions.GetDataByRange);
 server.post('/DBF/API/GoogleSpreadsheetService/GetSheetsListBySpreadsheetID', functions.GetSheetsListBySpreadsheetID);
-server.post('/DBF/API/GoogleSpreadsheetService/GetSpreadsheetListByToken', functions.GetSpreadsheetListByToken);
 server.post('/DBF/API/GoogleSpreadsheetService/GetSpreadsheetListByConnectionID', functions.GetSpreadsheetListByConnectionID);
+server.post('/DBF/API/GoogleSpreadsheetService/GetSpreadsheetListByToken', functions.GetSpreadsheetListByToken);
+server.post('/DBF/API/GoogleSpreadsheetService/UpdateValues', functions.UpdateValues);
 
 
 
