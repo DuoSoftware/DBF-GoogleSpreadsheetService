@@ -21,7 +21,7 @@
     "dvp-common-lite": "^1.0.1",
     "express": "^4.16.4",
     "google-spreadsheet": "^2.0.7",
-    "googleapis": "^27.0.0",
+    "googleapis": "^39.1.0",
     "mongoose": "^5.4.20",
     "request": "^2.88.0",
     "restify": "^7.7.0",
