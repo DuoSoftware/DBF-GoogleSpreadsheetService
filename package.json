@@ -19,7 +19,7 @@
     "dbf-permissionmanager": "^1.0.10",
     "dbf-workspacemanager": "^1.0.5",
     "dvp-common-lite": "^1.0.1",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "google-spreadsheet": "^2.0.7",
     "googleapis": "^27.0.0",
     "mongoose": "^5.4.20",
